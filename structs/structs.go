@@ -1,0 +1,531 @@
+package structs
+
+import (
+	"time"
+)
+
+type LogLines struct {
+	Logs []string `json:"logs"`
+}
+
+type Target struct {
+	App struct {
+		ID string `json:"id"`
+	} `json:"app"`
+}
+
+type PromotionSpec struct {
+	Pipeline struct {
+		ID string `json:"id"`
+	} `json:"pipeline"`
+	Source struct {
+		App struct {
+			ID string `json:"id"`
+		} `json:"app"`
+	} `json:"source"`
+	Targets []Target `json:"targets"`
+}
+
+type PipelineSpec []struct {
+	App struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"app"`
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Stage     string    `json:"stage"`
+	Pipeline  struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"pipeline"`
+}
+
+type ActionSpec struct {
+	Messages []string `json:"messages"`
+	Name     string   `json:"name"`
+	Status   string   `json:"status"`
+}
+
+type StepSpec struct {
+	Name    string       `json:"name"`
+	Actions []ActionSpec `json:"actions"`
+}
+
+type ResultSpec struct {
+	Payload struct {
+		StartTime       string     `json:"start_time"`
+		StopTime        string     `json:"stop_time"`
+		BuildTimeMillis int64      `json:"build_time_millis"`
+		Lifecycle       string     `json:"lifecycle"`
+		Outcome         string     `json:"outcome"`
+		Status          string     `json:"status"`
+		Steps           []StepSpec `json:"steps"`
+	} `json:"payload"`
+}
+
+type InstanceStatusSpec []struct {
+	Instanceid string    `json:"instanceid"`
+	Phase      string    `json:"phase"`
+	Starttime  time.Time `json:"starttime"`
+	Reason     string    `json:"reason"`
+	Appstatus  []struct {
+		App         string    `json:"app"`
+		Readystatus bool      `json:"readystatus"`
+		Startedat   time.Time `json:"startedat"`
+	} `json:"appstatus"`
+}
+
+type JobRunSpec struct {
+	Image                 string `json:"image"`
+	DeleteBeforeCreate    bool   `json:"deleteBeforeCreate"`
+	RestartPolicy         string `json:"restartPolicy"`
+	ActiveDeadlineSeconds int    `json:"activeDeadlineSeconds"`
+}
+
+type ReleaseHookSpec struct {
+	Action string `json:"action"`
+	App    struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
+	Release struct {
+		ID          string    `json:"id"`
+		Result      string    `json:"result"`
+		CreatedAt   time.Time `json:"created_at"`
+		Version     int       `json:"version"`
+		Description string    `json:"description"`
+	} `json:"release"`
+	Build struct {
+		ID string `json:"id"`
+	} `json:"build"`
+}
+
+type EnvironmentVariable struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+type DiagnosticSpec struct {
+	ID             string                `json:"id"`
+	Space          string                `json:"space"`
+	App            string                `json:"app"`
+	Organization   string                `json:"org"`
+	BuildID        string                `json:"buildid"`
+	GithubVersion  string                `json:"version"`
+	CommitAuthor   string                `json:"commitauthor"`
+	CommitMessage  string                `json:"commitmessage"`
+	Action         string                `json:"action"`
+	Result         string                `json:"result"`
+	Job            string                `json:"job"`
+	JobSpace       string                `json:"jobspace"`
+	Image          string                `json:"image"`
+	PipelineName   string                `json:"pipelinename"`
+	TransitionFrom string                `json:"transitionfrom"`
+	TransitionTo   string                `json:"transitionto"`
+	Timeout        int                   `json:"timeout"`
+	Startdelay     int                   `json:"startdelay"`
+	Slackchannel   string                `json:"slackchannel"`
+	Env            []EnvironmentVariable `json:"env"`
+	RunID          string                `json:"runid"`
+	OverallStatus  string                `json:"overallstatus"`
+}
+
+type ESlogSpecIn struct {
+	Job           string   `json:"job"`
+	Jobspace      string   `json:"jobspace"`
+	App           string   `json:"app"`
+	Space         string   `json:"space"`
+	Testid        string   `json:"testid"`
+	Timestamp     int      `json:"timestamp"`
+	Hrtimestamp   string   `json:"hrtimestamp"`
+	Logs          []string `json:"logs"`
+	RunID         string   `json:"runid"`
+	OverallStatus string   `json:"overallstatus"`
+	BuildID       string   `json:"buildid"`
+	Organization  string   `json:"org"`
+}
+
+type ESlogSpecOut struct {
+	Took     int  `json:"took"`
+	TimedOut bool `json:"timed_out"`
+	Shards   struct {
+		Total      int `json:"total"`
+		Successful int `json:"successful"`
+		Failed     int `json:"failed"`
+	} `json:"_shards"`
+	Hits struct {
+		Total    int     `json:"total"`
+		MaxScore float64 `json:"max_score"`
+		Hits     []struct {
+			Index  string  `json:"_index"`
+			Type   string  `json:"_type"`
+			ID     string  `json:"_id"`
+			Score  float64 `json:"_score"`
+			Source struct {
+				Job         string   `json:"job"`
+				Jobspace    string   `json:"jobspace"`
+				App         string   `json:"app"`
+				Space       string   `json:"space"`
+				Testid      string   `json:"testid"`
+				Timestamp   string   `json:"timestamp"`
+				Hrtimestamp string   `json:"hrtimestamp"`
+				Logs        []string `json:"logs"`
+			} `json:"_source"`
+		} `json:"hits"`
+	} `json:"hits"`
+}
+
+type ESlogSpecOut1 struct {
+	Index   string `json:"_index"`
+	Type    string `json:"_type"`
+	ID      string `json:"_id"`
+	Version int    `json:"_version"`
+	Found   bool   `json:"found"`
+	Source  struct {
+		Job         string   `json:"job"`
+		Jobspace    string   `json:"jobspace"`
+		App         string   `json:"app"`
+		Space       string   `json:"space"`
+		Testid      string   `json:"testid"`
+		Timestamp   int      `json:"timestamp"`
+		Hrtimestamp string   `json:"hrtimestamp"`
+		BuildID     string   `json:"buildid"`
+		Logs        []string `json:"logs"`
+	} `json:"_source"`
+}
+
+type Varspec struct {
+	Setname  string `json:"setname"`
+	Varname  string `json:"varname"`
+	Varvalue string `json:"varvalue"`
+}
+
+type ESlogSpecIn1 struct {
+	Job           string   `json:"job"`
+	Jobspace      string   `json:"jobspace"`
+	App           string   `json:"app"`
+	Space         string   `json:"space"`
+	Testid        string   `json:"testid"`
+	Timestamp     int      `json:"timestamp"`
+	Hrtimestamp   string   `json:"hrtimestamp"`
+	Logs          []string `json:"logs"`
+	Runid         string   `json:"runid"`
+	Overallstatus string   `json:"overallstatus"`
+}
+
+type BuildSpec struct {
+	App struct {
+		ID string `json:"id"`
+	} `json:"app"`
+	Buildpacks      interface{} `json:"buildpacks"`
+	CreatedAt       time.Time   `json:"created_at"`
+	ID              string      `json:"id"`
+	OutputStreamURL string      `json:"output_stream_url"`
+	SourceBlob      struct {
+		Checksum string `json:"checksum"`
+		URL      string `json:"url"`
+		Version  string `json:"version"`
+		Commit   string `json:"commit"`
+	} `json:"source_blob"`
+	Release interface{} `json:"release"`
+	Slug    struct {
+		ID string `json:"id"`
+	} `json:"slug"`
+	Status    string    `json:"status"`
+	UpdatedAt time.Time `json:"updated_at"`
+	User      struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+	} `json:"user"`
+}
+
+type CommitSpec struct {
+	Sha    string `json:"sha"`
+	Commit struct {
+		Author struct {
+			Name  string    `json:"name"`
+			Email string    `json:"email"`
+			Date  time.Time `json:"date"`
+		} `json:"author"`
+		Committer struct {
+			Name  string    `json:"name"`
+			Email string    `json:"email"`
+			Date  time.Time `json:"date"`
+		} `json:"committer"`
+		Message string `json:"message"`
+		Tree    struct {
+			Sha string `json:"sha"`
+			URL string `json:"url"`
+		} `json:"tree"`
+		URL          string `json:"url"`
+		CommentCount int    `json:"comment_count"`
+	} `json:"commit"`
+	URL         string `json:"url"`
+	HTMLURL     string `json:"html_url"`
+	CommentsURL string `json:"comments_url"`
+	Author      struct {
+		Login             string `json:"login"`
+		ID                int    `json:"id"`
+		AvatarURL         string `json:"avatar_url"`
+		GravatarID        string `json:"gravatar_id"`
+		URL               string `json:"url"`
+		HTMLURL           string `json:"html_url"`
+		FollowersURL      string `json:"followers_url"`
+		FollowingURL      string `json:"following_url"`
+		GistsURL          string `json:"gists_url"`
+		StarredURL        string `json:"starred_url"`
+		SubscriptionsURL  string `json:"subscriptions_url"`
+		OrganizationsURL  string `json:"organizations_url"`
+		ReposURL          string `json:"repos_url"`
+		EventsURL         string `json:"events_url"`
+		ReceivedEventsURL string `json:"received_events_url"`
+		Type              string `json:"type"`
+		SiteAdmin         bool   `json:"site_admin"`
+	} `json:"author"`
+	Committer struct {
+		Login             string `json:"login"`
+		ID                int    `json:"id"`
+		AvatarURL         string `json:"avatar_url"`
+		GravatarID        string `json:"gravatar_id"`
+		URL               string `json:"url"`
+		HTMLURL           string `json:"html_url"`
+		FollowersURL      string `json:"followers_url"`
+		FollowingURL      string `json:"following_url"`
+		GistsURL          string `json:"gists_url"`
+		StarredURL        string `json:"starred_url"`
+		SubscriptionsURL  string `json:"subscriptions_url"`
+		OrganizationsURL  string `json:"organizations_url"`
+		ReposURL          string `json:"repos_url"`
+		EventsURL         string `json:"events_url"`
+		ReceivedEventsURL string `json:"received_events_url"`
+		Type              string `json:"type"`
+		SiteAdmin         bool   `json:"site_admin"`
+	} `json:"committer"`
+	Parents []struct {
+		Sha     string `json:"sha"`
+		URL     string `json:"url"`
+		HTMLURL string `json:"html_url"`
+	} `json:"parents"`
+	Stats struct {
+		Total     int `json:"total"`
+		Additions int `json:"additions"`
+		Deletions int `json:"deletions"`
+	} `json:"stats"`
+	Files []struct {
+		Sha         string `json:"sha"`
+		Filename    string `json:"filename"`
+		Status      string `json:"status"`
+		Additions   int    `json:"additions"`
+		Deletions   int    `json:"deletions"`
+		Changes     int    `json:"changes"`
+		BlobURL     string `json:"blob_url"`
+		RawURL      string `json:"raw_url"`
+		ContentsURL string `json:"contents_url"`
+		Patch       string `json:"patch"`
+	} `json:"files"`
+}
+
+type ConfigSpec []struct {
+	Setname  string `json:"setname"`
+	Varname  string `json:"varname"`
+	Varvalue string `json:"varvalue"`
+}
+
+type Run struct {
+	ID            string    `json:"id"`
+	App           string    `json:"app"`
+	Space         string    `json:"space"`
+	Job           string    `json:"job"`
+	Jobspace      string    `json:"jobspace"`
+	Hrtimestamp   time.Time `json:"hrtimestamp"`
+	Overallstatus string    `json:"overallstatus"`
+	BuildID       string    `json:"buildid"`
+}
+
+type RunList struct {
+	Runs []Run `json:"runs"`
+}
+
+type RunsSpec struct {
+	Took     int  `json:"took"`
+	TimedOut bool `json:"timed_out"`
+	Shards   struct {
+		Total      int `json:"total"`
+		Successful int `json:"successful"`
+		Failed     int `json:"failed"`
+	} `json:"_shards"`
+	Hits struct {
+		Total    int     `json:"total"`
+		MaxScore float64 `json:"max_score"`
+		Hits     []struct {
+			Index  string  `json:"_index"`
+			Type   string  `json:"_type"`
+			ID     string  `json:"_id"`
+			Score  float64 `json:"_score"`
+			Source struct {
+				Job           string    `json:"job"`
+				Jobspace      string    `json:"jobspace"`
+				App           string    `json:"app"`
+				Space         string    `json:"space"`
+				Testid        string    `json:"testid"`
+				Timestamp     int       `json:"timestamp"`
+				Hrtimestamp   time.Time `json:"hrtimestamp"`
+				Logs          []string  `json:"logs"`
+				Runid         string    `json:"runid"`
+				Overallstatus string    `json:"overallstatus"`
+				BuildID       string    `json:"buildid"`
+			} `json:"_source"`
+		} `json:"hits"`
+	} `json:"hits"`
+}
+
+type AppControllerApp struct {
+	ArchivedAt                   time.Time `json:"archived_at"`
+	BuildpackProvidedDescription string    `json:"buildpack_provided_description"`
+	BuildStack                   struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"build_stack"`
+	CreatedAt   time.Time `json:"created_at"`
+	GitURL      string    `json:"git_url"`
+	ID          string    `json:"id"`
+	Maintenance bool      `json:"maintenance"`
+	Name        string    `json:"name"`
+	SimpleName  string    `json:"simple_name"`
+	Key         string    `json:"key"`
+	Owner       struct {
+		Email string `json:"email"`
+		ID    string `json:"id"`
+	} `json:"owner"`
+	Organization struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"organization"`
+	Formation struct {
+	} `json:"formation"`
+	Region struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"region"`
+	ReleasedAt time.Time `json:"released_at"`
+	RepoSize   int       `json:"repo_size"`
+	SlugSize   int       `json:"slug_size"`
+	Space      struct {
+		Name string `json:"name"`
+	} `json:"space"`
+	Stack struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"stack"`
+	UpdatedAt time.Time `json:"updated_at"`
+	WebURL    string    `json:"web_url"`
+}
+
+type BuildPayload struct {
+	Action string `json:"action"`
+	App    struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
+	Build struct {
+		ID        string    `json:"id"`
+		Result    string    `json:"result"`
+		CreatedAt time.Time `json:"created_at"`
+		Repo      string    `json:"repo"`
+		Commit    string    `json:"commit"`
+	} `json:"build"`
+}
+
+type BuildInfo struct {
+	App struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
+	CreatedAt  time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	SourceBlob struct {
+		Version string `json:"version"`
+		Commit  string `json:"commit"`
+	} `json:"source_blob"`
+	Status       string    `json:"status"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Organization string    `json:"org"`
+}
+
+type BuildESSend struct {
+	App          string    `json:"app"`
+	Space        string    `json:"space"`
+	Organization string    `json:"org"`
+	ID           string    `json:"buildid"`
+	Version      string    `json:"version"`
+	Commit       string    `json:"commit"`
+	Status       string    `json:"status"`
+	UpdatedAt    time.Time `json:"hrtimestamp"`
+}
+
+type Bindspec struct {
+	App      string `json:"appname"`
+	Space    string `json:"space"`
+	Bindtype string `json:"bindtype"`
+	Bindname string `json:"bindname"`
+}
+
+type KeyValuePair struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type BitsRSpec struct {
+	Version  string   `json:"version"`
+	Messages []string `json:"messages"`
+	Examples []struct {
+		ID              string      `json:"id"`
+		Description     string      `json:"description"`
+		FullDescription string      `json:"full_description"`
+		Status          string      `json:"status"`
+		FilePath        string      `json:"file_path"`
+		LineNumber      int         `json:"line_number"`
+		RunTime         float64     `json:"run_time"`
+		PendingMessage  interface{} `json:"pending_message"`
+	} `json:"examples"`
+	Summary struct {
+		Duration     float64 `json:"duration"`
+		ExampleCount int     `json:"example_count"`
+		FailureCount int     `json:"failure_count"`
+		PendingCount int     `json:"pending_count"`
+	} `json:"summary"`
+	SummaryLine string `json:"summary_line"`
+}
+
+type Testsuite struct {
+	Skipped   string     `xml:"skipped,attr"`
+	Timestamp string     `xml:"timestamp,attr"`
+	Tests     string     `xml:"tests,attr"`
+	Failures  string     `xml:"failures,attr"`
+	Time      string     `xml:"time,attr"`
+	Name      string     `xml:"name,attr"`
+	Errors    string     `xml:"errors,attr"`
+	Hostname  string     `xml:"hostname,attr"`
+	Testcases []Testcase `xml:"testcase"`
+	Property  Property   `xml:"properties>property"`
+}
+
+type Testcase struct {
+	File      string `xml:"file,attr"`
+	Time      string `xml:"time,attr"`
+	Classname string `xml:"classname,attr"`
+	Name      string `xml:"name,attr"`
+}
+type Property struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:"value,attr"`
+}
