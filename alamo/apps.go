@@ -19,7 +19,7 @@ func GetVersion(app string, space string, buildid string) (s string, e error) {
     fmt.Println(space)
     fmt.Println(buildid)
 
-    req, err := http.NewRequest("GET", "https://api.alamoapp.octanner.io/apps/"+app+"-"+space+"/builds/"+buildid, nil)
+    req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+app+"-"+space+"/builds/"+buildid, nil)
     req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"),"authorization"))
     if err != nil {
         fmt.Println(err)

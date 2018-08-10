@@ -13,7 +13,7 @@ import (
 
 func GetPipeline(pipelinename string) (p structs.PipelineSpec, e error) {
 	var pipeline structs.PipelineSpec
-	appcontrollerurl := "https://api.alamoapp.octanner.io/pipelines/" + pipelinename + "/pipeline-couplings"
+	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL")+"/pipelines/" + pipelinename + "/pipeline-couplings"
 	req, err := http.NewRequest("GET", appcontrollerurl, nil)
 	if err != nil {
 		fmt.Println(err)
@@ -50,7 +50,7 @@ func PromoteApp(promotion structs.PromotionSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	appcontrollerurl := "https://api.alamoapp.octanner.io/pipeline-promotions"
+	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL")+"/pipeline-promotions"
 	req, err := http.NewRequest("POST", appcontrollerurl, bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
