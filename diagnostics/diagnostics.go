@@ -46,6 +46,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
+
+
 	var jobrun structs.JobRunSpec
 	jobrun.Image = diagnostic.Image
 	jobrun.DeleteBeforeCreate = true
@@ -184,7 +186,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = scaleToZero(diagnostic)
+        err = alamo.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0,0)
+
 	if err != nil {
 		fmt.Println(err)
 	}
