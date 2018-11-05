@@ -1,8 +1,6 @@
 package hooks
 
 import (
-	alamo "alamo-self-diagnostics/alamo"
-	structs "alamo-self-diagnostics/structs"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -12,7 +10,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-        vault "scc-gitlab-1.dev.octanner.net/octanner/octvault"
+        vault "github.com/akkeris/vault-client"
+	alamo "taas/alamo"
+	structs "taas/structs"
 )
 
 func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Render) {
@@ -22,32 +22,32 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 		return
 	}
 	spew.Dump(payload)
-       if payload.Build.Result != "pending"{
-	buildinfo, err := getBuildInfo(payload)
-	if err != nil {
-		fmt.Println(err)
-	}
+	if payload.Build.Result != "pending" {
+		buildinfo, err := getBuildInfo(payload)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	buildinfo.App.Name = payload.App.Name
-	buildinfo.Space.Name = payload.Space.Name
-	org, err := alamo.GetAppControllerOrg(buildinfo.App.Name + "-" + buildinfo.Space.Name)
-	if err != nil {
-		fmt.Println(err)
+		buildinfo.App.Name = payload.App.Name
+		buildinfo.Space.Name = payload.Space.Name
+		org, err := alamo.GetAppControllerOrg(buildinfo.App.Name + "-" + buildinfo.Space.Name)
+		if err != nil {
+			fmt.Println(err)
+		}
+		buildinfo.Organization = org
+		spew.Dump(buildinfo)
+		err = writeBuildOutputES(buildinfo)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	buildinfo.Organization = org
-	spew.Dump(buildinfo)
-	err = writeBuildOutputES(buildinfo)
-	if err != nil {
-		fmt.Println(err)
-	}
-       }
 	r.Text(200, "Done\n")
 }
 
 func getBuildInfo(payload structs.BuildPayload) (b structs.BuildInfo, e error) {
 	var buildinfo structs.BuildInfo
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+payload.App.Name+"-"+payload.Space.Name+"/builds/"+payload.Build.ID, nil)
-	req.Header.Add("Authorization",vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"),"authorization") )
+	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
 	if err != nil {
 		fmt.Println(err)
 		return buildinfo, err

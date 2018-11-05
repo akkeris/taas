@@ -1,11 +1,11 @@
 package dbstore
 
 import (
-	structs "alamo-self-diagnostics/structs"
 	"database/sql"
 	"fmt"
 	"github.com/go-martini/martini"
 	_ "github.com/lib/pq"
+	structs "taas/structs"
 	//"github.com/martini-contrib/binding"
 	"encoding/json"
 	"encoding/xml"
@@ -28,14 +28,23 @@ func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(dberr)
 	}
 
-	var id string
+	var stmtstring string = "insert into testruns (testid , runid , space , app , org , buildid , githubversion , commitauthor , commitmessage , action , result , job , jobspace , image , pipelinename , transitionfrom , transitionto , timeout, startdelay, overallstatus) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)"
 
-	inserterr := db.QueryRow("insert into testruns (testid , runid , space , app , org , buildid , githubversion , commitauthor , commitmessage , action , result , job , jobspace , image , pipelinename , transitionfrom , transitionto , timeout, startdelay, overallstatus) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) returning runid;", diagnostic.ID, diagnostic.RunID, diagnostic.Space, diagnostic.App, diagnostic.Organization, diagnostic.BuildID, diagnostic.GithubVersion, diagnostic.CommitAuthor, diagnostic.CommitMessage, diagnostic.Action, diagnostic.Result, diagnostic.Job, diagnostic.JobSpace, diagnostic.Image, diagnostic.PipelineName, diagnostic.TransitionFrom, diagnostic.TransitionTo, diagnostic.Timeout, diagnostic.Startdelay, diagnostic.OverallStatus).Scan(&id)
-
-	if inserterr != nil {
-		return inserterr
+	stmt, err := db.Prepare(stmtstring)
+	if err != nil {
+		db.Close()
+		return err
 	}
 
+	_, inserterr := stmt.Exec(diagnostic.ID, diagnostic.RunID, diagnostic.Space, diagnostic.App, diagnostic.Organization, diagnostic.BuildID, diagnostic.GithubVersion, diagnostic.CommitAuthor, diagnostic.CommitMessage, diagnostic.Action, diagnostic.Result, diagnostic.Job, diagnostic.JobSpace, diagnostic.Image, diagnostic.PipelineName, diagnostic.TransitionFrom, diagnostic.TransitionTo, diagnostic.Timeout, diagnostic.Startdelay, diagnostic.OverallStatus)
+
+	if inserterr != nil {
+		stmt.Close()
+		db.Close()
+		return inserterr
+	}
+	stmt.Close()
+	db.Close()
 	return nil
 }
 
@@ -63,13 +72,13 @@ func StoreBits(req *http.Request, params martini.Params, r render.Render) {
 			return
 		}
 	}
-        if format == "" {
-                err := storeBitsRspec(body, runid)
-                if err != nil {
-                        r.JSON(500, map[string]interface{}{"response": err})
-                        return
-                }
-        }
+	if format == "" {
+		err := storeBitsRspec(body, runid)
+		if err != nil {
+			r.JSON(500, map[string]interface{}{"response": err})
+			return
+		}
+	}
 	r.JSON(202, map[string]interface{}{"response": "accepted"})
 
 }
