@@ -1,7 +1,6 @@
 package notifications
 
 import (
-	structs "alamo-self-diagnostics/structs"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	structs "taas/structs"
 	"time"
 )
 
@@ -54,9 +54,9 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 	slack.Text = slack.Text + "  Status: " + status + "  \n"
 	slack.Text = slack.Text + "<" + os.Getenv("LOG_URL") + "/logs/" + diagnostic.RunID + "|Logs>   "
 	slack.Text = slack.Text + "<" + os.Getenv("KIBANA_URL") + "/app/kibana#/doc/logs/logs/run/?id=" + diagnostic.RunID + "|Kibana>  "
-        if diagnostic.GithubVersion != "" { 
-	slack.Text = slack.Text + "<" + diagnostic.GithubVersion + "|Commit>  "
-        }
+	if diagnostic.GithubVersion != "" {
+		slack.Text = slack.Text + "<" + diagnostic.GithubVersion + "|Commit>  "
+	}
 	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
 	slack.Text = slack.Text + "Changes Made by: @" + diagnostic.CommitAuthor
 

@@ -1,26 +1,26 @@
 package pipelines
 
 import (
-	structs "alamo-self-diagnostics/structs"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-        "os"
-        vault "scc-gitlab-1.dev.octanner.net/octanner/octvault"
+	"os"
+        vault "github.com/akkeris/vault-client"
+	structs "taas/structs"
 )
 
 func GetPipeline(pipelinename string) (p structs.PipelineSpec, e error) {
 	var pipeline structs.PipelineSpec
-	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL")+"/pipelines/" + pipelinename + "/pipeline-couplings"
+	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL") + "/pipelines/" + pipelinename + "/pipeline-couplings"
 	req, err := http.NewRequest("GET", appcontrollerurl, nil)
 	if err != nil {
 		fmt.Println(err)
 		return pipeline, err
 	}
 	req.Header.Add("Content-type", "application/json")
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"),"authorization"))
+	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -50,14 +50,14 @@ func PromoteApp(promotion structs.PromotionSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL")+"/pipeline-promotions"
+	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL") + "/pipeline-promotions"
 	req, err := http.NewRequest("POST", appcontrollerurl, bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 	req.Header.Add("Content-type", "application/json")
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"),"authorization"))
+	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
 
 	client := http.Client{}
 	resp, err := client.Do(req)

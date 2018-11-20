@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	structs "alamo-self-diagnostics/structs"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	structs "taas/structs"
 )
 
 func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e error) {
@@ -66,6 +66,7 @@ func getSecretVars(job string, jobspace string) (v []structs.EnvironmentVariable
 		fmt.Println(dberr)
 		return envvars, dberr
 	}
+	defer db.Close()
 	stmt, err := db.Prepare("select bindname from appbindings where appname = $1 and space=$2 and bindtype='vault'")
 	if err != nil {
 		fmt.Println(err)

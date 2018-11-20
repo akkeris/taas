@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	structs "alamo-self-diagnostics/structs"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -12,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	structs "taas/structs"
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -20,6 +20,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	if dberr != nil {
 		fmt.Println(dberr)
 	}
+	defer db.Close()
 	fmt.Println(diagnosticspec.Slackchannel)
 	stmt, err := db.Prepare("UPDATE diagnostics set job=$1, jobspace=$2,image=$3,pipelinename=$4,transitionfrom=$5,transitionto=$6,timeout=$7,startdelay=$8,slackchannel=$9 where app=$10 and space=$11 and action=$12 and result=$13")
 	if err != nil {
@@ -51,7 +52,7 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	if dberr != nil {
 		fmt.Println(dberr)
 	}
-
+	defer db.Close()
 	diagnosticspec.TransitionTo = strings.Replace(diagnosticspec.TransitionTo, " ", "", -1)
 
 	var id string
@@ -373,7 +374,7 @@ func DeleteService(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-
+	defer db.Close()
 	stmt, err := db.Prepare("delete from diagnostics where id=$1")
 	if err != nil {
 		fmt.Println(err)

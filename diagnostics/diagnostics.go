@@ -1,13 +1,6 @@
 package diagnostics
 
 import (
-	alamo "alamo-self-diagnostics/alamo"
-	dbstore "alamo-self-diagnostics/dbstore"
-	diagnosticlogs "alamo-self-diagnostics/diagnosticlogs"
-	githubapi "alamo-self-diagnostics/githubapi"
-	notifications "alamo-self-diagnostics/notifications"
-	pipelines "alamo-self-diagnostics/pipelines"
-	structs "alamo-self-diagnostics/structs"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -23,6 +16,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	alamo "taas/alamo"
+	dbstore "taas/dbstore"
+	diagnosticlogs "taas/diagnosticlogs"
+	githubapi "taas/githubapi"
+	notifications "taas/notifications"
+	pipelines "taas/pipelines"
+	structs "taas/structs"
 	"time"
 )
 
@@ -46,8 +46,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
-
-
 	var jobrun structs.JobRunSpec
 	jobrun.Image = diagnostic.Image
 	jobrun.DeleteBeforeCreate = true
@@ -59,26 +57,25 @@ func check(diagnostic structs.DiagnosticSpec) {
 	}
 	alamoapiurl := os.Getenv("ALAMO_API_URL")
 
-
-/*
-        dreq, derr := http.NewRequest("DELETE", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job, nil)
-        if derr != nil {
-                fmt.Println(derr)
-        }
-        dreq.Header.Add("Content-type", "application/json")
-        client := http.Client{}
-        dresp, derr := client.Do(dreq)
-        if derr != nil {
-                fmt.Println(derr)
-        }
-        defer dresp.Body.Close()
-        dbodybytes, derr := ioutil.ReadAll(dresp.Body)
-        if derr != nil {
-                fmt.Println(derr)
-        }
-        fmt.Println(string(dbodybytes))
-*/
-        alamo.DeleteKubeJob(diagnostic.JobSpace,diagnostic.Job)
+	/*
+	   dreq, derr := http.NewRequest("DELETE", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job, nil)
+	   if derr != nil {
+	           fmt.Println(derr)
+	   }
+	   dreq.Header.Add("Content-type", "application/json")
+	   client := http.Client{}
+	   dresp, derr := client.Do(dreq)
+	   if derr != nil {
+	           fmt.Println(derr)
+	   }
+	   defer dresp.Body.Close()
+	   dbodybytes, derr := ioutil.ReadAll(dresp.Body)
+	   if derr != nil {
+	           fmt.Println(derr)
+	   }
+	   fmt.Println(string(dbodybytes))
+	*/
+	alamo.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
 
 	req, err := http.NewRequest("POST", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/run", bytes.NewBuffer(p))
 	if err != nil {
@@ -186,7 +183,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-        err = alamo.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0,0)
+	err = alamo.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0, 0)
 
 	if err != nil {
 		fmt.Println(err)
@@ -314,6 +311,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		fmt.Println(dberr)
 		return diagnostics, dberr
 	}
+	defer db.Close()
 	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
@@ -565,6 +563,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		fmt.Println(dberr)
 		return diagnostics, dberr
 	}
+	defer db.Close()
 	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
@@ -658,19 +657,19 @@ func rerun(space string, app string, action string, result string, buildid strin
 			return err
 		}
 		fmt.Println(version)
-                var commitauthor string
-                 var commitmessage string
-                 if version != "" {
-                    element.GithubVersion=version
-                    commitauthor,commitmessage,err = githubapi.GetCommitAuthor(version)
-                    if err != nil {
-                      fmt.Println(err)
-                      }
-                    fmt.Println(commitauthor)
-                 }else{
-                     commitauthor = "none"
-                     commitmessage = "none"
-                }  
+		var commitauthor string
+		var commitmessage string
+		if version != "" {
+			element.GithubVersion = version
+			commitauthor, commitmessage, err = githubapi.GetCommitAuthor(version)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println(commitauthor)
+		} else {
+			commitauthor = "none"
+			commitmessage = "none"
+		}
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
 		RunDiagnostic(element)
@@ -704,6 +703,7 @@ func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error
 		fmt.Println(dberr)
 		return diagnostic, dberr
 	}
+	defer db.Close()
 	var selectstring string
 	if !isUUID(provided) {
 		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics where job||'-'||jobspace = $1"
@@ -800,10 +800,10 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "can only bind vault"})
 		return
 	}
-//	if strings.Contains(bind.Bindname, "/prod/") {
-//		r.JSON(500, map[string]interface{}{"response": "can't bind prod"})
-//		return
-//	}
+	//	if strings.Contains(bind.Bindname, "/prod/") {
+	//		r.JSON(500, map[string]interface{}{"response": "can't bind prod"})
+	//		return
+	//	}
 	alamoapiurl := os.Getenv("ALAMO_API_URL")
 	req, err := http.NewRequest("POST", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind", bytes.NewBuffer(p))
 	if err != nil {
@@ -825,56 +825,55 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 }
 
 func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
-        provided := params["provided"]
-        spec := params["_1"]
-        if spec == "undefined" {
-                r.JSON(500, map[string]interface{}{"response": "invalid request"})
-                return
-        }
-        fmt.Println(provided)
-        fmt.Println(spec)
-        diagnostic, err := getDiagnosticByNameOrID(provided)
+	provided := params["provided"]
+	spec := params["_1"]
+	if spec == "undefined" {
+		r.JSON(500, map[string]interface{}{"response": "invalid request"})
+		return
+	}
+	fmt.Println(provided)
+	fmt.Println(spec)
+	diagnostic, err := getDiagnosticByNameOrID(provided)
 
-        if err != nil {
-                fmt.Println(err)
-                r.JSON(500, map[string]interface{}{"response": err.Error()})
-                return
-        }
-        if diagnostic.ID == "" {
-                r.JSON(500, map[string]interface{}{"response": "invalid test"})
-                return
-        }
-        fmt.Println(diagnostic.Job)
-        fmt.Println(diagnostic.JobSpace)
-        var bind structs.Bindspec
-        bind.App = diagnostic.Job
-        bind.Space = diagnostic.JobSpace
-        bind.Bindtype = strings.Split(spec, ":")[0]
-        bind.Bindname = strings.Split(spec, ":")[1]
-        if bind.Bindtype != "vault" {
-                r.JSON(500, map[string]interface{}{"response": "can only bind vault"})
-                return
-        }
-        alamoapiurl := os.Getenv("ALAMO_API_URL")
-        req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/"+bind.Bindtype+":"+bind.Bindname, nil)
-        if err != nil {
-                fmt.Println(err)
-        }
-        req.Header.Add("Content-type", "application/json")
-        fmt.Println(req)
-        client := http.Client{}
-        resp, err := client.Do(req)
-        if err != nil {
-                fmt.Println(err)
-        }
-        defer resp.Body.Close()
-        bodybytes, err := ioutil.ReadAll(resp.Body)
-        if err != nil {
-                fmt.Println(err)
-        }
-        fmt.Println(string(bodybytes))
-        r.JSON(200, map[string]interface{}{"response": "secret removed"})
-
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+	if diagnostic.ID == "" {
+		r.JSON(500, map[string]interface{}{"response": "invalid test"})
+		return
+	}
+	fmt.Println(diagnostic.Job)
+	fmt.Println(diagnostic.JobSpace)
+	var bind structs.Bindspec
+	bind.App = diagnostic.Job
+	bind.Space = diagnostic.JobSpace
+	bind.Bindtype = strings.Split(spec, ":")[0]
+	bind.Bindname = strings.Split(spec, ":")[1]
+	if bind.Bindtype != "vault" {
+		r.JSON(500, map[string]interface{}{"response": "can only bind vault"})
+		return
+	}
+	alamoapiurl := os.Getenv("ALAMO_API_URL")
+	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/"+bind.Bindtype+":"+bind.Bindname, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+	req.Header.Add("Content-type", "application/json")
+	fmt.Println(req)
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(bodybytes))
+	r.JSON(200, map[string]interface{}{"response": "secret removed"})
 
 }
 func isUUID(uuid string) bool {
@@ -894,6 +893,7 @@ func IsValidTest(test string) (v bool, e error) {
 		fmt.Println(dberr)
 		return false, dberr
 	}
+	defer db.Close()
 	stmt, err := db.Prepare("select id from diagnostics where job||'-'||jobspace = $1")
 	if err != nil {
 		fmt.Println(err)
