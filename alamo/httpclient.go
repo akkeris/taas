@@ -4,10 +4,8 @@ import (
     "bytes"
     "errors"
     "encoding/json"
-    "crypto/tls"
-    "crypto/x509"
     "fmt"
-    "github.com/bitly/go-simplejson"
+    vault "github.com/akkeris/vault-client"
     "net/http"
     "os"
     "io"
@@ -22,45 +20,14 @@ type Response struct {
         Body   []byte
 }
 
+var kubernetestoken string
+
 func Startclient(){
-    vaulttoken := os.Getenv("VAULT_TOKEN")
-    vaultaddr := os.Getenv("VAULT_ADDR")
-
-    kubernetescertsecret := os.Getenv("KUBERNETES_CERT_SECRET")
-    vaultaddruri := vaultaddr + "/v1/" + kubernetescertsecret
-    vreq, err := http.NewRequest("GET", vaultaddruri, nil)
-    vreq.Header.Add("X-Vault-Token", vaulttoken)
-    vclient := &http.Client{}
-    vresp, err := vclient.Do(vreq)
-    if err != nil {
-    }
-    defer vresp.Body.Close()
-    bodyj, _ := simplejson.NewFromReader(vresp.Body)
-    admincrt, _ := bodyj.Get("data").Get("admin-crt").String()
-    adminkey, _ := bodyj.Get("data").Get("admin-key").String()
-    cacrt, _ := bodyj.Get("data").Get("ca-crt").String()
-
-    cert, err := tls.X509KeyPair([]byte(admincrt), []byte(adminkey))
-    if err != nil {
-        fmt.Println(err)
-    }
-
-    caCert := cacrt
-    if err != nil {
-        fmt.Println(err)
-    }
-    caCertPool := x509.NewCertPool()
-    caCertPool.AppendCertsFromPEM([]byte(caCert))
-
-    tlsConfig := &tls.Config{
-        Certificates: []tls.Certificate{cert},
-        RootCAs:      caCertPool,
-    }
-    tlsConfig.BuildNameToCertificate()
-    transport := &http.Transport{TLSClientConfig: tlsConfig}
-
-    Client = &http.Client{Transport: transport}
+    kubernetestoken = vault.GetField(os.Getenv("KUBERNETES_TOKEN_SECRET"), "token")    
+    fmt.Println(kubernetestoken)
+    Client = &http.Client{}
 }
+
 
 func buildK8sRequest(method string, url string, body io.Reader)  (r *http.Request, e error){
 
@@ -74,6 +41,7 @@ func buildK8sRequest(method string, url string, body io.Reader)  (r *http.Reques
       }
      req.Header.Add("Accept","application/json")
      req.Header.Add("Content-type", "application/json")
+     req.Header.Add("Authorization", "Bearer "+kubernetestoken)
      return req, nil
 }
 
@@ -144,7 +112,7 @@ func ScaleJob(space string, jobName string, replicas int, timeout int) (e error)
         if err != nil {
                 return err
         }
-        req, e = http.NewRequest("PUT", "https://" + kubernetesapiserver +"/apis/batch/v1/namespaces/"+space+"/jobs/"+jobName,  bytes.NewBuffer(p))
+        req, e =  buildK8sRequest("PUT", "https://" + kubernetesapiserver +"/apis/batch/v1/namespaces/"+space+"/jobs/"+jobName,  bytes.NewBuffer(p))
         if e != nil {
                 return e
         }
