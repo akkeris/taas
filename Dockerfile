@@ -15,6 +15,8 @@ ADD pipelines /go/src/taas/pipelines
 ADD githubapi /go/src/taas/githubapi
 ADD dbstore /go/src/taas/dbstore
 RUN /build.sh
-CMD ["/go/src/taas/server"]
+ADD start.sh /start.sh
+RUN chmod +x /start.sh
+CMD ["/start.sh"]
 EXPOSE 4000
 
