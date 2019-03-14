@@ -26,6 +26,8 @@ type Slack struct {
 	Channel     string       `json:"channel"`
 	Username    string       `json:"username"`
 	Text        string       `json:"text"`
+        UnfurlLinks bool `json:"unfurl_links"`
+        UnfurlMedia bool `json:"unfurl_media"`
 	IconEmoji   string       `json:"icon_emoji"`
 	Attachments []Attachment `json:"attachments"`
 }
@@ -59,7 +61,8 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 	}
 	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
 	slack.Text = slack.Text + "Changes Made by: @" + diagnostic.CommitAuthor
-
+        slack.UnfurlLinks=false
+        slack.UnfurlMedia=false
 	var attachments []Attachment
 	var attachment Attachment
 
