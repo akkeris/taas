@@ -47,6 +47,15 @@ func check(diagnostic structs.DiagnosticSpec) {
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
 	var jobrun structs.JobRunSpec
+   if strings.HasPrefix(diagnostic.Image,"akkeris://"){
+       imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
+       currentimage := alamo.GetCurrentImage(imageappname)
+        jobrun.Image = currentimage
+   }else{
+       fmt.Println("assuming docker image url")
+        jobrun.Image = diagnostic.Image
+   }
+
 	jobrun.Image = diagnostic.Image
 	jobrun.DeleteBeforeCreate = true
 	jobrun.RestartPolicy = "Never"
