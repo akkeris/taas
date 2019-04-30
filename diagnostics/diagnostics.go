@@ -51,6 +51,7 @@ func check(diagnostic structs.DiagnosticSpec) {
        imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
        currentimage := alamo.GetCurrentImage(imageappname)
         jobrun.Image = currentimage
+        diagnostic.Image = currentimage
    }else{
        fmt.Println("assuming docker image url")
         jobrun.Image = diagnostic.Image

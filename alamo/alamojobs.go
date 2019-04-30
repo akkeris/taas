@@ -484,13 +484,11 @@ func toAppSpace(full string)(s string, a string){
       parts := strings.Split(full,"-")
       app := parts[0]
       rest := parts[1:]
-      fmt.Println(app)
-      fmt.Println(rest)
       return app, strings.Join(rest,"-")
 }
 
 func GetCurrentImage(app string)(i string){
-       space, app := toAppSpace(app)
+       app, space  := toAppSpace(app)
        req, err := http.NewRequest("GET", os.Getenv("ALAMO_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
         if err != nil {
                 fmt.Println(err)
