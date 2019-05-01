@@ -14,7 +14,7 @@ import (
 	vault "github.com/akkeris/vault-client"
 )
 
-var Client *http.Client
+var client *http.Client
 
 type Response struct {
 	Status int
@@ -23,18 +23,14 @@ type Response struct {
 
 var kubernetestoken string
 
-func Startclient() {
+// StartClient - Get K8S token from Vault, initialize HTTP client
+func StartClient() {
 	kubernetestoken = vault.GetField(os.Getenv("KUBERNETES_TOKEN_SECRET"), "token")
-	fmt.Println(kubernetestoken)
-	Client = &http.Client{}
+	client = &http.Client{}
 }
 
 func buildK8sRequest(method string, url string, body io.Reader) (r *http.Request, e error) {
-
-	var err error
-	var req *http.Request
-	fmt.Println("using cert")
-	req, err = http.NewRequest(method, url, body)
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		fmt.Println(err)
 		return req, err
@@ -87,7 +83,7 @@ func ScaleJob(space string, jobName string, replicas int, timeout int) (e error)
 	if e != nil {
 		return e
 	}
-	resp, err := Client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -114,7 +110,7 @@ func ScaleJob(space string, jobName string, replicas int, timeout int) (e error)
 	if e != nil {
 		return e
 	}
-	resp, err = Client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -130,7 +126,7 @@ func kubernetesAPICall(method string, uri string) (re Response, err error) {
 		return re, err
 	}
 	fmt.Println(req)
-	resp, err := Client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return re, err

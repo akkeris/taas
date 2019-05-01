@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	alamo "taas/alamo"
+	alamo "taas/jobs"
 	structs "taas/structs"
 
 	vault "github.com/akkeris/vault-client"

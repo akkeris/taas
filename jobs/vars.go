@@ -17,7 +17,7 @@ func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e er
 	fmt.Println(job)
 	fmt.Println(jobspace)
 
-	req, err := http.NewRequest("GET", os.Getenv("ALAMO_API_URL")+"/v1/config/set/"+job+"-"+jobspace+"-cs", nil)
+	req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/config/set/"+job+"-"+jobspace+"-cs", nil)
 	if err != nil {
 		fmt.Println(err)
 		return envvars, err
@@ -104,7 +104,7 @@ func getSecretVars(job string, jobspace string) (v []structs.EnvironmentVariable
 func getSecret(secret string) (v []structs.EnvironmentVariable, e error) {
 	var envvars []structs.EnvironmentVariable
 	var secretvars []structs.KeyValuePair
-	req, err := http.NewRequest("GET", os.Getenv("ALAMO_API_URL")+"/v1/service/vault/credentials/"+secret, nil)
+	req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/service/vault/credentials/"+secret, nil)
 	if err != nil {
 		fmt.Println(err)
 		return envvars, err

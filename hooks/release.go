@@ -2,7 +2,7 @@ package hooks
 
 import (
 	"fmt"
-	alamo "taas/alamo"
+	alamo "taas/jobs"
 	diagnostics "taas/diagnostics"
 	githubapi "taas/githubapi"
 	structs "taas/structs"

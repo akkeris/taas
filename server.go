@@ -1,11 +1,14 @@
 package main
 
 import (
-	jobs "taas/alamo"
+	"fmt"
+	"os"
+	"strconv"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	diagnostics "taas/diagnostics"
 	hooks "taas/hooks"
+	jobs "taas/jobs"
 	structs "taas/structs"
 
 	"github.com/go-martini/martini"
@@ -13,8 +16,34 @@ import (
 	"github.com/martini-contrib/render"
 )
 
+func checkEnv() {
+	var c int
+	var requiredEnv = []string{
+		"AKKERIS_API_URL", "APP_CONTROLLER_AUTH_SECRET", "APP_CONTROLLER_URL",
+		"DEFAULT_ORG", "DEFAULT_START_DELAY", "DIAGNOSTICDB", "ENABLE_SLACK_NOTIFICATIONS",
+		"ES_URL", "GITHUB_TOKEN_SECRET", "KIBANA_URL", "KUBERNETES_API_SERVER",
+		"KUBERNETES_TOKEN_SECRET", "LOG_URL", "PITDB", "POSTBACKURL", "RERUN_URL",
+		"SLACK_NOTIFICATION_CHANNEL_DEFAULT", "SLACK_NOTIFICATION_URL",
+		"VAULT_ADDR", "VAULT_TOKEN",
+	}
+
+	for _, env := range requiredEnv {
+		_, set := os.LookupEnv(env)
+		if !set {
+			fmt.Println("Environment variable " + env + " missing!")
+			c++
+		}
+	}
+
+	if c > 0 {
+		fmt.Println(strconv.Itoa(c) + " required environment variables missing. Exiting...")
+		os.Exit(1)
+	}
+}
+
 func main() {
-	jobs.Startclient()
+	checkEnv()
+	jobs.StartClient()
 	m := martini.Classic()
 	m.Use(render.Renderer())
 	m.Post("/v1/releasehook", binding.Json(structs.ReleaseHookSpec{}), hooks.ReleaseHook)

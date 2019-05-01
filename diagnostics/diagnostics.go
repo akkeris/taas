@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	alamo "taas/alamo"
+	alamo "taas/jobs"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	githubapi "taas/githubapi"
@@ -56,7 +56,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
+	alamoapiurl := os.Getenv("AKKERIS_API_URL")
 
 	alamo.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
 
@@ -86,7 +86,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	overallstatus = "timedout"
 	for i := 0; i < diagnostic.Timeout; i += 5 {
 
-		alamoapiurl := os.Getenv("ALAMO_API_URL")
+		alamoapiurl := os.Getenv("AKKERIS_API_URL")
 		req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
 		if err != nil {
 			fmt.Println(err)
@@ -258,7 +258,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 func scaleToZero(diagnostic structs.DiagnosticSpec) (e error) {
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
+	alamoapiurl := os.Getenv("AKKERIS_API_URL")
 	req, err := http.NewRequest("POST", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/scale/0/1", nil)
 	if err != nil {
 		fmt.Println(err)
@@ -783,7 +783,7 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 	//		r.JSON(500, map[string]interface{}{"response": "can't bind prod"})
 	//		return
 	//	}
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
+	alamoapiurl := os.Getenv("AKKERIS_API_URL")
 	req, err := http.NewRequest("POST", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
@@ -834,7 +834,7 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "can only bind vault"})
 		return
 	}
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
+	alamoapiurl := os.Getenv("AKKERIS_API_URL")
 	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/"+bind.Bindtype+":"+bind.Bindname, nil)
 	if err != nil {
 		fmt.Println(err)
