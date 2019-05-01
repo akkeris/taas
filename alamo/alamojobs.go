@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/lib/pq"
-	"github.com/nu7hatch/gouuid"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	structs "taas/structs"
+
+	_ "github.com/lib/pq"
+	"github.com/nu7hatch/gouuid"
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -40,8 +41,8 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(rowCnt)
 	return nil
-
 }
+
 func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	newappiduuid, _ := uuid.NewV4()
@@ -62,11 +63,9 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 
 	return nil
-
 }
 
 func CreateBind(diagnosticspec structs.DiagnosticSpec) (e error) {
-
 	type Bindspec struct {
 		App      string `json:"appname"`
 		Space    string `json:"space"`
@@ -106,7 +105,6 @@ func CreateBind(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(string(bodybytes))
 	return nil
-
 }
 
 func CreateConfigSet(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -147,8 +145,8 @@ func CreateConfigSet(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(string(bodybytes))
 	return nil
-
 }
+
 func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var vars []structs.Varspec
@@ -225,7 +223,6 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(string(bodybytes))
 	return nil
-
 }
 
 func UpdateVar(vartoadd structs.Varspec) error {

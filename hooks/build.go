@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/render"
 	"io/ioutil"
 	"net/http"
 	"os"
-        vault "github.com/akkeris/vault-client"
 	alamo "taas/alamo"
 	structs "taas/structs"
+
+	vault "github.com/akkeris/vault-client"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/render"
 )
 
 func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Render) {

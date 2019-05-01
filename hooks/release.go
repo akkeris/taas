@@ -2,13 +2,14 @@ package hooks
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/render"
 	alamo "taas/alamo"
 	diagnostics "taas/diagnostics"
 	githubapi "taas/githubapi"
 	structs "taas/structs"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/render"
 )
 
 func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors, r render.Render) {

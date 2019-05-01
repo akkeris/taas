@@ -4,11 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
 	"os"
 	structs "taas/structs"
+
+	_ "github.com/lib/pq"
 )
 
 func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e error) {

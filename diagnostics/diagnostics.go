@@ -5,11 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/go-martini/martini"
-	_ "github.com/lib/pq"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/render"
-	"github.com/nu7hatch/gouuid"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -24,6 +19,12 @@ import (
 	pipelines "taas/pipelines"
 	structs "taas/structs"
 	"time"
+
+	"github.com/go-martini/martini"
+	_ "github.com/lib/pq"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/render"
+	"github.com/nu7hatch/gouuid"
 )
 
 func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
@@ -57,24 +58,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	}
 	alamoapiurl := os.Getenv("ALAMO_API_URL")
 
-	/*
-	   dreq, derr := http.NewRequest("DELETE", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job, nil)
-	   if derr != nil {
-	           fmt.Println(derr)
-	   }
-	   dreq.Header.Add("Content-type", "application/json")
-	   client := http.Client{}
-	   dresp, derr := client.Do(dreq)
-	   if derr != nil {
-	           fmt.Println(derr)
-	   }
-	   defer dresp.Body.Close()
-	   dbodybytes, derr := ioutil.ReadAll(dresp.Body)
-	   if derr != nil {
-	           fmt.Println(derr)
-	   }
-	   fmt.Println(string(dbodybytes))
-	*/
 	alamo.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
 
 	req, err := http.NewRequest("POST", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/run", bytes.NewBuffer(p))
@@ -191,8 +174,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	diagnostic.OverallStatus = overallstatus
 	var loglines structs.LogLines
 	loglines.Logs = logs
-	diagnosticlogs.InternalWriteLog(diagnostic.Job, loglines)
-	diagnosticlogs.InternalWriteLogExtended(diagnostic.JobSpace, diagnostic.Job, loglines)
 	diagnosticlogs.WriteLogES(diagnostic, loglines)
 	err = dbstore.StoreRun(diagnostic)
 	if err != nil {
@@ -207,7 +188,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	result.Payload.Status = overallstatus
 	result.Payload.StartTime = starttime.Format(time.RFC3339)
 	result.Payload.StopTime = endtime.Format(time.RFC3339)
-	var duration time.Duration = endtime.Sub(starttime)
+	var duration = endtime.Sub(starttime)
 	result.Payload.BuildTimeMillis = duration.Nanoseconds() / 1e6
 
 	var step structs.StepSpec
@@ -224,8 +205,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var steps []structs.StepSpec
 	steps = append(steps, step)
 	result.Payload.Steps = steps
-	//	fmt.Println(result)
-	//err = postResults(result)
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -7,8 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-        vault "github.com/akkeris/vault-client"
 	structs "taas/structs"
+
+	vault "github.com/akkeris/vault-client"
 )
 
 func GetPipeline(pipelinename string) (p structs.PipelineSpec, e error) {
