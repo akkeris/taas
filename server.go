@@ -1,15 +1,16 @@
 package main
 
 import (
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/render"
 	jobs "taas/alamo"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	diagnostics "taas/diagnostics"
 	hooks "taas/hooks"
 	structs "taas/structs"
+
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/render"
 )
 
 func main() {
@@ -20,15 +21,10 @@ func main() {
 	m.Post("/v1/buildhook", binding.Json(structs.BuildPayload{}), hooks.BuildHook)
 	m.Post("/v1/diagnostic", binding.Json(structs.DiagnosticSpec{}), diagnostics.CreateDiagnostic)
 	m.Patch("/v1/diagnostic", binding.Json(structs.DiagnosticSpec{}), diagnostics.UpdateDiagnostic)
-	//	m.Get("/v1/diagnostic/jobspace/:jobspace/job/:job/logs", Logs)
-	m.Get("/v1/diagnostic/:job/logs", diagnosticlogs.Logs)
-	m.Get("/v1/diagnostic/jobspace/:jobspace/job/:job/logs", diagnosticlogs.LogsExtended)
 	m.Get("/v1/diagnostic/jobspace/:jobspace/job/:job/runs", diagnosticlogs.GetRuns)
 	m.Get("/v1/diagnostic/logs/:runid", diagnosticlogs.GetLogsES)
 	m.Get("/v1/diagnostic/logs/:runid/array", diagnosticlogs.GetLogsESObj)
 	m.Post("/v1/diagnostic/logs/:runid", binding.Json(structs.ESlogSpecIn1{}), diagnosticlogs.WriteLogESPost)
-	m.Post("/v1/diagnostic/:job/logs", binding.Json(structs.LogLines{}), diagnosticlogs.WriteLog)
-	m.Post("/v1/diagnostic/jobspace/:jobspace/job/:job/logs", binding.Json(structs.LogLines{}), diagnosticlogs.WriteLogExtended)
 	m.Get("/v1/diagnostics", diagnostics.GetDiagnosticsList)
 	m.Get("/v1/diagnostics/runs/info/:runid", diagnosticlogs.GetRunInfo)
 	m.Get("/v1/diagnostic/rerun", diagnostics.Rerun)
