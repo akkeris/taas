@@ -112,7 +112,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var overallstatus string
 	overallstatus = "timedout"
         var i float64
-	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.5  {
+	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
 
 		alamoapiurl := os.Getenv("ALAMO_API_URL")
 		req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
@@ -193,7 +193,7 @@ func check(diagnostic structs.DiagnosticSpec) {
                           break
                         }
                 }
-                time.Sleep(time.Millisecond * 500)
+                time.Sleep(time.Millisecond * 333)
 
 	}
 	fmt.Println("finishing....")
