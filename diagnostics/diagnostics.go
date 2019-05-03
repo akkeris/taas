@@ -99,7 +99,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 		fmt.Println(err)
 	}
 	defer resp.Body.Close()
-	bodybytes, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
 	}
