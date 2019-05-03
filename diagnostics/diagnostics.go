@@ -19,6 +19,7 @@ import (
 	alamo "taas/alamo"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
+        jobs "taas/alamo"
 	githubapi "taas/githubapi"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
@@ -189,7 +190,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 		time.Sleep(time.Second * 5)
 	}
 	fmt.Println("finishing....")
-	logs, err := diagnosticlogs.GetLogs(diagnostic.JobSpace, diagnostic.Job, instance)
+	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
 	if err != nil {
 		fmt.Println(err)
 	}
