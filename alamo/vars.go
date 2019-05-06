@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	structs "taas/structs"
+        "sort"
 )
 
 func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e error) {
@@ -55,6 +56,12 @@ func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e er
 		return envvars, err
 	}
 	envvars = append(envvars, secretenvvars...)
+
+
+        sort.Slice(envvars, func(i, j int) bool {
+             return envvars[i].Name < envvars[j].Name
+        })
+
 	return envvars, nil
 }
 
