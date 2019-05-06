@@ -457,7 +457,7 @@ func s3listFiles(w http.ResponseWriter, r *http.Request, backet, key string) {
 
 	if strings.ToLower(c.dirListingFormat) == "html" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		html := "<!DOCTYPE html><html><body><ul>"
+		html := "<!DOCTYPE html><html><body><font face = "courier"><ul>"
 		for _, file := range files {
 			html += "<li><a href=\"" + file + "\">" + file + "</a>"
 			if len(updatedAt) != 0 {
@@ -465,7 +465,7 @@ func s3listFiles(w http.ResponseWriter, r *http.Request, backet, key string) {
 			}
 			html += "</li>"
 		}
-		html += "</ul></body></html>"
+		html += "</ul></font></body></html>"
 		fmt.Fprintln(w, html)
 		return
 	}
