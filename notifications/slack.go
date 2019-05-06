@@ -55,6 +55,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 	slack.Text = slack.Text + "  Status: " + status + "  \n"
 	slack.Text = slack.Text + "<" + os.Getenv("LOG_URL") + "/logs/" + diagnostic.RunID + "|Logs>   "
 	slack.Text = slack.Text + "<" + os.Getenv("KIBANA_URL") + "/app/kibana#/doc/logs/logs/run/?id=" + diagnostic.RunID + "|Kibana>  "
+        slack.Text = slack.Text + "<" + os.Getenv("ARTIFACTS_URL") + "/v1/artifacts/"+diagnostic.RunID+"/ |Artifacts>  "
 	if diagnostic.GithubVersion != "" {
 		slack.Text = slack.Text + "<" + diagnostic.GithubVersion + "|Commit>  "
 	}
