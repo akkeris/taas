@@ -33,7 +33,6 @@ type Slack struct {
 }
 
 func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
-
 	var slack Slack
 	testframework := strings.ToUpper(strings.Split(strings.Replace(diagnostic.Image, "quay.octanner.io/developer/", "", -1), ":")[0])
 
@@ -76,7 +75,6 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 		attachment.Text = "FAIL"
 	}
 
-	fmt.Println(slack.Text)
 	attachment.Ts = int32(time.Now().Unix())
 
 	attachments = append(attachments, attachment)

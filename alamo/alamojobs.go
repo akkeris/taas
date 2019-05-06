@@ -478,3 +478,33 @@ func DeleteJob(diagnostic structs.DiagnosticSpec) (e error) {
 	return nil
 
 }
+
+
+func toAppSpace(full string)(s string, a string){
+      parts := strings.Split(full,"-")
+      app := parts[0]
+      rest := parts[1:]
+      return app, strings.Join(rest,"-")
+}
+
+func GetCurrentImage(app string)(i string){
+       app, space  := toAppSpace(app)
+       req, err := http.NewRequest("GET", os.Getenv("ALAMO_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
+        if err != nil {
+                fmt.Println(err)
+        }
+        client := http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+                fmt.Println(err)
+        }
+        defer resp.Body.Close()
+        bodybytes, err := ioutil.ReadAll(resp.Body)
+        var appinfo structs.AppInfo
+        err = json.Unmarshal(bodybytes, &appinfo)
+        if err != nil {
+                fmt.Println(err)
+        }
+        return appinfo.Image
+}
+

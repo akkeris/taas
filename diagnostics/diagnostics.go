@@ -19,6 +19,7 @@ import (
 	alamo "taas/alamo"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
+        jobs "taas/alamo"
 	githubapi "taas/githubapi"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
@@ -47,6 +48,16 @@ func check(diagnostic structs.DiagnosticSpec) {
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
 	var jobrun structs.JobRunSpec
+   if strings.HasPrefix(diagnostic.Image,"akkeris://"){
+       imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
+       currentimage := alamo.GetCurrentImage(imageappname)
+        jobrun.Image = currentimage
+        diagnostic.Image = currentimage
+   }else{
+       fmt.Println("assuming docker image url")
+        jobrun.Image = diagnostic.Image
+   }
+
 	jobrun.Image = diagnostic.Image
 	jobrun.DeleteBeforeCreate = true
 	jobrun.RestartPolicy = "Never"
@@ -88,11 +99,10 @@ func check(diagnostic structs.DiagnosticSpec) {
 		fmt.Println(err)
 	}
 	defer resp.Body.Close()
-	bodybytes, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
 
 	time.Sleep(time.Second * 3)
 
@@ -101,7 +111,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var instance string
 	var overallstatus string
 	overallstatus = "timedout"
-	for i := 0; i < diagnostic.Timeout; i += 5 {
+        var i float64
+	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
 
 		alamoapiurl := os.Getenv("ALAMO_API_URL")
 		req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
@@ -122,7 +133,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(string(bodybytes))
 
 		var status structs.InstanceStatusSpec
 		err = json.Unmarshal(bodybytes, &status)
@@ -144,10 +154,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 			}
 			break
 		}
-		fmt.Println(status[0].Instanceid)
 		instance = status[0].Instanceid
-		fmt.Println(status[0].Phase)
-		fmt.Println(status[0].Reason)
 		if status[0].Phase == "Succeeded/terminated" && status[0].Reason == "Completed" {
 			fmt.Println("JOB FINISHED OK")
 			overallstatus = "success"
@@ -174,12 +181,23 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
-		fmt.Println(i)
+                if status[0].Phase == "Running/running" && status[0].Appstatus[0].Readystatus==true {
+                        time2:=status[0].Appstatus[0].Startedat
+                        time1:=status[0].Starttime
+                        diff := time2.Sub(time1).Seconds()
+                        if diff > 10 {
+                          fmt.Printf("Diff: %v\n",diff)
+                          fmt.Println("JOB FAILED")
+                          overallstatus = "failed"
+                          endtime = time.Now().UTC()
+                          break
+                        }
+                }
+                time.Sleep(time.Millisecond * 333)
 
-		time.Sleep(time.Second * 5)
 	}
 	fmt.Println("finishing....")
-	logs, err := diagnosticlogs.GetLogs(diagnostic.JobSpace, diagnostic.Job, instance)
+	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
 	if err != nil {
 		fmt.Println(err)
 	}
