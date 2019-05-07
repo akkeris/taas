@@ -10,9 +10,11 @@ import (
 	diagnostics "taas/diagnostics"
 	hooks "taas/hooks"
 	structs "taas/structs"
+        artifacts "taas/artifacts"
 )
 
 func main() {
+        artifacts.Init()
 	jobs.Startclient()
 	m := martini.Classic()
 	m.Use(render.Renderer())
@@ -42,6 +44,10 @@ func main() {
 
 	m.Post("/v1/diagnostic/results/:runid", dbstore.StoreBits)
 	m.Get("/octhc", diagnostics.Octhc)
+
+        m.Get("/v1/artifacts/:runid/", artifacts.Wrapper(artifacts.Awss3))
+        m.Get("/v1/artifacts/:runid/**", artifacts.Wrapper(artifacts.Awss3))
+
 	m.Use(martini.Static("static"))
 	m.Run()
 }

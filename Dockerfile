@@ -14,6 +14,7 @@ ADD hooks /go/src/taas/hooks
 ADD pipelines /go/src/taas/pipelines
 ADD githubapi /go/src/taas/githubapi
 ADD dbstore /go/src/taas/dbstore
+ADD artifacts /go/src/taas/artifacts
 RUN /build.sh
 ADD start.sh /start.sh
 RUN chmod +x /start.sh

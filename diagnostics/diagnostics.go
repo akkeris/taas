@@ -31,12 +31,45 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 
 	// may need to inject the run id into the config set at this point so that it is available to internal code if it will send logs
 
-	var runidvar structs.Varspec
-	runidvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-	runidvar.Varname = "DIAGNOSTIC_RUNID"
-	runidvar.Varvalue = diagnostic.RunID
-	alamo.AddVar(runidvar)
-	alamo.UpdateVar(runidvar)
+	var newvar structs.Varspec
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "DIAGNOSTIC_RUNID"
+	newvar.Varvalue = diagnostic.RunID
+	alamo.AddVar(newvar)
+	alamo.UpdateVar(newvar)
+      
+        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+        newvar.Varname = "TAAS_RUNID"
+        newvar.Varvalue = diagnostic.RunID
+        alamo.AddVar(newvar)
+        alamo.UpdateVar(newvar)
+
+        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+        newvar.Varname = "TAAS_ARTIFACT_REGION"
+        newvar.Varvalue = os.Getenv("AWS_REGION")
+        alamo.AddVar(newvar)
+        alamo.UpdateVar(newvar)
+
+        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+        newvar.Varname = "TAAS_AWS_ACCESS_KEY_ID"
+        newvar.Varvalue = os.Getenv("AWS_ACCESS_KEY_ID")
+        alamo.AddVar(newvar)
+        alamo.UpdateVar(newvar)
+
+        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+        newvar.Varname = "TAAS_AWS_SECRET_ACCESS_KEY"
+        newvar.Varvalue = os.Getenv("AWS_SECRET_ACCESS_KEY")
+        alamo.AddVar(newvar)
+        alamo.UpdateVar(newvar)
+
+        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+        newvar.Varname = "TAAS_ARTIFACT_BUCKET"
+        newvar.Varvalue = os.Getenv("AWS_S3_BUCKET")
+        alamo.AddVar(newvar)
+        alamo.UpdateVar(newvar)
+
+
+
 
 	go check(diagnostic)
 	return nil
@@ -708,7 +741,31 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
-
+        envvars:=diagnostic.Env
+        var newenvvars []structs.EnvironmentVariable
+        protectedspace, err := alamo.IsProtectedSpace(diagnostic.Space)
+        if err != nil {
+                fmt.Println(err)
+                r.JSON(500, map[string]interface{}{"response": err.Error()})
+                return
+        }
+        for _, element := range envvars {
+           if (strings.HasPrefix(element.Name,"TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
+               continue
+           }
+            
+ 
+           if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))){
+              var newvar structs.EnvironmentVariable
+              newvar.Name=element.Name
+              newvar.Value="[redacted]"
+              newenvvars=append(newenvvars, newvar)
+           }else{
+              newenvvars=append(newenvvars, element)
+           }
+        }
+       
+        diagnostic.Env=newenvvars
 	r.JSON(200, diagnostic)
 
 }
