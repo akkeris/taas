@@ -545,3 +545,21 @@ type AppInfo struct {
         Image       string `json:"image"`
 }
 
+type SpaceInfo struct {
+    Compliance []string  `json:"compliance"`
+    CreatedAt  time.Time `json:"created_at"`
+    ID         string    `json:"id"`
+    Name       string    `json:"name"`
+    Region     struct {
+        ID   string `json:"id"`
+        Name string `json:"name"`
+    } `json:"region"`
+    Stack struct {
+        ID   string `json:"id"`
+        Name string `json:"name"`
+    } `json:"stack"`
+    State     string    `json:"state"`
+    Apps      string    `json:"apps"`
+    UpdatedAt time.Time `json:"updated_at"`
+}
+

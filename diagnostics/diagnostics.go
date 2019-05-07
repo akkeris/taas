@@ -741,7 +741,31 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
-
+        envvars:=diagnostic.Env
+        var newenvvars []structs.EnvironmentVariable
+        protectedspace, err := alamo.IsProtectedSpace(diagnostic.Space)
+        if err != nil {
+                fmt.Println(err)
+                r.JSON(500, map[string]interface{}{"response": err.Error()})
+                return
+        }
+        for _, element := range envvars {
+           if (strings.HasPrefix(element.Name,"TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
+               continue
+           }
+            
+ 
+           if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))){
+              var newvar structs.EnvironmentVariable
+              newvar.Name=element.Name
+              newvar.Value="[redacted]"
+              newenvvars=append(newenvvars, newvar)
+           }else{
+              newenvvars=append(newenvvars, element)
+           }
+        }
+       
+        diagnostic.Env=newenvvars
 	r.JSON(200, diagnostic)
 
 }
