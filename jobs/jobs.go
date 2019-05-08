@@ -499,7 +499,7 @@ func toAppSpace(full string)(s string, a string){
 
 func GetCurrentImage(app string)(i string){
        app, space  := toAppSpace(app)
-       req, err := http.NewRequest("GET", os.Getenv("ALAMO_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
+       req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
         if err != nil {
                 fmt.Println(err)
         }
