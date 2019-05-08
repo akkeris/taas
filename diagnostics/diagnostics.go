@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	alamo "taas/jobs"
+	akkeris "taas/jobs"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
         jobs "taas/jobs"
@@ -36,38 +36,38 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
 	newvar.Varname = "DIAGNOSTIC_RUNID"
 	newvar.Varvalue = diagnostic.RunID
-	alamo.AddVar(newvar)
-	alamo.UpdateVar(newvar)
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
       
         newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
         newvar.Varname = "TAAS_RUNID"
         newvar.Varvalue = diagnostic.RunID
-        alamo.AddVar(newvar)
-        alamo.UpdateVar(newvar)
+        akkeris.AddVar(newvar)
+        akkeris.UpdateVar(newvar)
 
         newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
         newvar.Varname = "TAAS_ARTIFACT_REGION"
         newvar.Varvalue = os.Getenv("AWS_REGION")
-        alamo.AddVar(newvar)
-        alamo.UpdateVar(newvar)
+        akkeris.AddVar(newvar)
+        akkeris.UpdateVar(newvar)
 
         newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
         newvar.Varname = "TAAS_AWS_ACCESS_KEY_ID"
         newvar.Varvalue = os.Getenv("AWS_ACCESS_KEY_ID")
-        alamo.AddVar(newvar)
-        alamo.UpdateVar(newvar)
+        akkeris.AddVar(newvar)
+        akkeris.UpdateVar(newvar)
 
         newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
         newvar.Varname = "TAAS_AWS_SECRET_ACCESS_KEY"
         newvar.Varvalue = os.Getenv("AWS_SECRET_ACCESS_KEY")
-        alamo.AddVar(newvar)
-        alamo.UpdateVar(newvar)
+        akkeris.AddVar(newvar)
+        akkeris.UpdateVar(newvar)
 
         newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
         newvar.Varname = "TAAS_ARTIFACT_BUCKET"
         newvar.Varvalue = os.Getenv("AWS_S3_BUCKET")
-        alamo.AddVar(newvar)
-        alamo.UpdateVar(newvar)
+        akkeris.AddVar(newvar)
+        akkeris.UpdateVar(newvar)
 
 
 
@@ -84,7 +84,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var jobrun structs.JobRunSpec
    if strings.HasPrefix(diagnostic.Image,"akkeris://"){
        imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
-       currentimage := alamo.GetCurrentImage(imageappname)
+       currentimage := akkeris.GetCurrentImage(imageappname)
         jobrun.Image = currentimage
         diagnostic.Image = currentimage
    }else{
@@ -100,11 +100,11 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	alamoapiurl := os.Getenv("AKKERIS_API_URL")
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
 
-	alamo.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
+	akkeris.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
 
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/run", bytes.NewBuffer(p))
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/run", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -130,8 +130,8 @@ func check(diagnostic structs.DiagnosticSpec) {
         var i float64
 	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
                 time.Sleep(time.Millisecond * 333)
-		alamoapiurl := os.Getenv("AKKERIS_API_URL")
-		req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
+		akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -215,7 +215,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = alamo.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0, 0)
+	err = akkeris.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0, 0)
 
 	if err != nil {
 		fmt.Println(err)
@@ -307,8 +307,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 func scaleToZero(diagnostic structs.DiagnosticSpec) (e error) {
 
-	alamoapiurl := os.Getenv("AKKERIS_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/scale/0/1", nil)
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/scale/0/1", nil)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -422,25 +422,25 @@ func DeleteDiagnostic(params martini.Params, r render.Render) {
 
 func deleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 
-	err := alamo.DeleteService(diagnostic)
+	err := akkeris.DeleteService(diagnostic)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	err = alamo.DeleteBind(diagnostic)
+	err = akkeris.DeleteBind(diagnostic)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	err = alamo.DeleteSet(diagnostic)
+	err = akkeris.DeleteSet(diagnostic)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	err = alamo.DeleteJob(diagnostic)
+	err = akkeris.DeleteJob(diagnostic)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -456,7 +456,7 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		r.JSON(500, map[string]interface{}{"response": berr})
 		return
 	}
-	isvalidspace, err := alamo.IsValidSpace(diagnosticspec.JobSpace)
+	isvalidspace, err := akkeris.IsValidSpace(diagnosticspec.JobSpace)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
@@ -483,28 +483,28 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 }
 
 func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
-	err := alamo.CreateJob(diagnosticspec)
+	err := akkeris.CreateJob(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	err = alamo.CreateConfigSet(diagnosticspec)
+	err = akkeris.CreateConfigSet(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	err = alamo.CreateVariables(diagnosticspec)
+	err = akkeris.CreateVariables(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	err = alamo.CreateBind(diagnosticspec)
+	err = akkeris.CreateBind(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	err = alamo.CreateService(diagnosticspec)
+	err = akkeris.CreateService(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -533,19 +533,19 @@ func UpdateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 
 func updateDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 
-	err := alamo.UpdateService(diagnosticspec)
+	err := akkeris.UpdateService(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	fmt.Println(diagnosticspec.Env)
 
-	existing, err := alamo.GetVars(diagnosticspec.Job, diagnosticspec.JobSpace)
+	existing, err := akkeris.GetVars(diagnosticspec.Job, diagnosticspec.JobSpace)
 	for _, element := range existing {
 		fmt.Println(element)
 		if !strings.HasPrefix(element.Name, "OCT_VAULT") && !strings.HasPrefix(element.Name, "DIAGNOSTIC") {
 			fmt.Println("DELETE:" + element.Name)
-			alamo.DeleteVar(diagnosticspec, element.Name)
+			akkeris.DeleteVar(diagnosticspec, element.Name)
 		}
 	}
 
@@ -557,12 +557,12 @@ func updateDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 			currentvar.Varvalue = element.Value
 			currentvar.Setname = diagnosticspec.Job + "-" + diagnosticspec.JobSpace + "-cs"
 
-			err := alamo.AddVar(currentvar)
+			err := akkeris.AddVar(currentvar)
 			if err != nil {
 				fmt.Println(err)
 			}
 
-			err = alamo.UpdateVar(currentvar)
+			err = akkeris.UpdateVar(currentvar)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -641,7 +641,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		fmt.Println(runid)
 		diagnostic.RunID = runid
 		if !(simple == "true") {
-			envvars, _ := alamo.GetVars(djob, djobspace)
+			envvars, _ := akkeris.GetVars(djob, djobspace)
 			diagnostic.Env = envvars
 		}
 		diagnostics = append(diagnostics, diagnostic)
@@ -679,7 +679,7 @@ func rerun(space string, app string, action string, result string, buildid strin
 	}
 	for _, element := range diagnosticslist {
 		element.BuildID = buildid
-		version, err := alamo.GetVersion(element.App, element.Space, element.BuildID)
+		version, err := akkeris.GetVersion(element.App, element.Space, element.BuildID)
 		if err != nil {
 			fmt.Println(err)
 			return err
@@ -720,7 +720,7 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 	}
         envvars:=diagnostic.Env
         var newenvvars []structs.EnvironmentVariable
-        protectedspace, err := alamo.IsProtectedSpace(diagnostic.Space)
+        protectedspace, err := akkeris.IsProtectedSpace(diagnostic.Space)
         if err != nil {
                 fmt.Println(err)
                 r.JSON(500, map[string]interface{}{"response": err.Error()})
@@ -807,7 +807,7 @@ func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error
 		//runid := runiduuid.String()
 		//fmt.Println(runid)
 		//diagnostic.RunID = runid
-		envvars, _ := alamo.GetVars(djob, djobspace)
+		envvars, _ := akkeris.GetVars(djob, djobspace)
 		diagnostic.Env = envvars
 	}
 
@@ -856,8 +856,8 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 	//		r.JSON(500, map[string]interface{}{"response": "can't bind prod"})
 	//		return
 	//	}
-	alamoapiurl := os.Getenv("AKKERIS_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -907,8 +907,8 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "can only bind vault"})
 		return
 	}
-	alamoapiurl := os.Getenv("AKKERIS_API_URL")
-	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/"+bind.Bindtype+":"+bind.Bindname, nil)
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("DELETE", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/"+bind.Bindtype+":"+bind.Bindname, nil)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -988,7 +988,7 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 	}
 	varspec.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
 	fmt.Println(varspec)
-	existing, err := alamo.GetVars(diagnostic.Job, diagnostic.JobSpace)
+	existing, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
 	var exists bool
 	exists = false
 	for _, element := range existing {
@@ -1000,14 +1000,14 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 	if exists {
 		//update
 		fmt.Println("Updating")
-		err = alamo.UpdateVar(varspec)
+		err = akkeris.UpdateVar(varspec)
 		if err != nil {
 			fmt.Println(err)
 			r.JSON(500, map[string]interface{}{"response": err})
 		}
 	} else {
 		fmt.Println("Adding")
-		err = alamo.AddVar(varspec)
+		err = akkeris.AddVar(varspec)
 		if err != nil {
 			fmt.Println(err)
 			r.JSON(500, map[string]interface{}{"response": err})
@@ -1029,7 +1029,7 @@ func UnsetConfig(params martini.Params, r render.Render) {
 	if diagnostic.ID == "" {
 		r.JSON(400, map[string]interface{}{"response": "bad request - test does not exist"})
 	}
-	err = alamo.DeleteVar(diagnostic, varname)
+	err = akkeris.DeleteVar(diagnostic, varname)
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}

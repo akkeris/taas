@@ -2,7 +2,7 @@ package hooks
 
 import (
 	"fmt"
-	alamo "taas/jobs"
+	akkeris "taas/jobs"
 	diagnostics "taas/diagnostics"
 	githubapi "taas/githubapi"
 	structs "taas/structs"
@@ -28,7 +28,7 @@ func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors
 	}
 	for _, element := range diagnosticslist {
 		element.BuildID = releasehookpayload.Build.ID
-		version, err := alamo.GetVersion(element.App, element.Space, element.BuildID)
+		version, err := akkeris.GetVersion(element.App, element.Space, element.BuildID)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -46,7 +46,7 @@ func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors
 			commitauthor = "none"
 			commitmessage = "none"
 		}
-		org, err := alamo.GetAppControllerOrg(element.App + "-" + element.Space)
+		org, err := akkeris.GetAppControllerOrg(element.App + "-" + element.Space)
 		element.Organization = org
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage

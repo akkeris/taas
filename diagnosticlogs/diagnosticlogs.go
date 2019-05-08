@@ -17,9 +17,9 @@ import (
 )
 
 func GetLogs(space string, job string, instance string) (l []string, e error) {
-	alamoapiurl := os.Getenv("AKKERIS_API_URL")
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
 	var lines []string
-	req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+space+"/app/"+job+"/instance/"+instance+"/log", nil)
+	req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+space+"/app/"+job+"/instance/"+instance+"/log", nil)
 	if err != nil {
 		fmt.Println(err)
 		return lines, err
