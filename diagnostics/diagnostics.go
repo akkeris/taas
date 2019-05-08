@@ -14,7 +14,7 @@ import (
 	alamo "taas/jobs"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
-        jobs "taas/alamo"
+        jobs "taas/jobs"
 	githubapi "taas/githubapi"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+        "strings"
 	"time"
 
 	vault "github.com/akkeris/vault-client"
@@ -206,4 +207,30 @@ type JobScaleGet struct {
 	Status struct {
 		StartTime time.Time `json:"startTime"`
 	} `json:"status"`
+}
+
+func GetTestLogs(jobspace string, job string, instance string)(l []string, e error){
+        limitBytes := "10000000"
+        var lines []string
+        kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
+        req, e := buildK8sRequest("GET", "https://" + kubernetesapiserver +"/api/v1/namespaces/"+jobspace+"/pods/"+instance+"/log?limitBytes="+limitBytes+"&container="+job, nil)
+        if e != nil {
+                return lines, e
+        }
+        resp, err := client.Do(req);
+        if err != nil {
+              fmt.Println(err)
+              return lines, err
+        }
+        if resp.StatusCode != http.StatusOK {
+                return lines, errors.New("Unable to get logs, kubernetes returned: " + resp.Status)
+        }
+        defer resp.Body.Close()
+        bodybytes , err :=ioutil.ReadAll(resp.Body)
+        if err != nil {
+               fmt.Println(err)
+               return lines, errors.New("Unable to get Logs")
+        }
+        lines = strings.Split(string(bodybytes), "\n")
+        return lines, nil
 }
