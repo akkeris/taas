@@ -129,7 +129,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	overallstatus = "timedout"
         var i float64
 	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
-
+                time.Sleep(time.Millisecond * 333)
 		alamoapiurl := os.Getenv("AKKERIS_API_URL")
 		req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
 		if err != nil {
@@ -209,8 +209,6 @@ func check(diagnostic structs.DiagnosticSpec) {
                           break
                         }
                 }
-                time.Sleep(time.Millisecond * 333)
-
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
