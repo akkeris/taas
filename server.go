@@ -11,6 +11,8 @@ import (
 	jobs "taas/jobs"
 	structs "taas/structs"
 
+	artifacts "taas/artifacts"
+
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
@@ -43,7 +45,8 @@ func checkEnv() {
 
 func main() {
 	checkEnv()
-	jobs.StartClient()
+	artifacts.Init()
+	jobs.Startclient()
 	m := martini.Classic()
 	m.Use(render.Renderer())
 	m.Post("/v1/releasehook", binding.Json(structs.ReleaseHookSpec{}), hooks.ReleaseHook)
@@ -67,6 +70,10 @@ func main() {
 
 	m.Post("/v1/diagnostic/results/:runid", dbstore.StoreBits)
 	m.Get("/octhc", diagnostics.Octhc)
+
+	m.Get("/v1/artifacts/:runid/", artifacts.Wrapper(artifacts.Awss3))
+	m.Get("/v1/artifacts/:runid/**", artifacts.Wrapper(artifacts.Awss3))
+
 	m.Use(martini.Static("static"))
 	m.Run()
 }

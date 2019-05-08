@@ -529,3 +529,37 @@ type Property struct {
 	Name  string `xml:"name,attr"`
 	Value string `xml:"value,attr"`
 }
+
+type AppInfo struct {
+        Appname   string `json:"appname"`
+        Space     string `json:"space"`
+        Instances int    `json:"instances"`
+        Bindings  []struct {
+                Appname  string `json:"appname"`
+                Space    string `json:"space"`
+                Bindtype string `json:"bindtype"`
+                Bindname string `json:"bindname"`
+        } `json:"bindings"`
+        Plan        string `json:"plan"`
+        Healthcheck string `json:"healthcheck"`
+        Image       string `json:"image"`
+}
+
+type SpaceInfo struct {
+    Compliance []string  `json:"compliance"`
+    CreatedAt  time.Time `json:"created_at"`
+    ID         string    `json:"id"`
+    Name       string    `json:"name"`
+    Region     struct {
+        ID   string `json:"id"`
+        Name string `json:"name"`
+    } `json:"region"`
+    Stack struct {
+        ID   string `json:"id"`
+        Name string `json:"name"`
+    } `json:"stack"`
+    State     string    `json:"state"`
+    Apps      string    `json:"apps"`
+    UpdatedAt time.Time `json:"updated_at"`
+}
+

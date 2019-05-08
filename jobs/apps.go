@@ -105,3 +105,43 @@ func IsValidSpace(space string) (v bool, e error) {
 		return false, nil
 	}
 }
+
+func IsProtectedSpace(space string) (p bool, err error){
+        req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/spaces/"+space, nil)
+        req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        if err != nil {
+                fmt.Println("1")
+                fmt.Println(err)
+                return false, err
+        }
+        client := http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+                fmt.Println("2")
+                fmt.Println(err)
+                return false, err
+        }
+        var spaceinfo structs.SpaceInfo
+        defer resp.Body.Close()
+        bodybytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+                fmt.Println("3")
+          fmt.Println(err)
+          return false, err
+        }
+        err = json.Unmarshal(bodybytes, &spaceinfo)
+        if err != nil {
+                fmt.Println("4")
+                fmt.Println(err)
+                return false, err
+        }       
+        var toreturn bool
+        toreturn = false
+        for _, element := range spaceinfo.Compliance{
+          if element == "socs" {
+              toreturn = true
+          }
+        }
+        return toreturn, nil
+}
+

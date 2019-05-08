@@ -33,7 +33,6 @@ type Slack struct {
 }
 
 func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
-
 	var slack Slack
 	testframework := strings.ToUpper(strings.Split(strings.Replace(diagnostic.Image, "quay.octanner.io/developer/", "", -1), ":")[0])
 
@@ -56,6 +55,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 	slack.Text = slack.Text + "  Status: " + status + "  \n"
 	slack.Text = slack.Text + "<" + os.Getenv("LOG_URL") + "/logs/" + diagnostic.RunID + "|Logs>   "
 	slack.Text = slack.Text + "<" + os.Getenv("KIBANA_URL") + "/app/kibana#/doc/logs/logs/run/?id=" + diagnostic.RunID + "|Kibana>  "
+        slack.Text = slack.Text + "<" + os.Getenv("ARTIFACTS_URL") + "/v1/artifacts/"+diagnostic.RunID+"/ |Artifacts>  "
 	if diagnostic.GithubVersion != "" {
 		slack.Text = slack.Text + "<" + diagnostic.GithubVersion + "|Commit>  "
 	}
@@ -76,7 +76,6 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 		attachment.Text = "FAIL"
 	}
 
-	fmt.Println(slack.Text)
 	attachment.Ts = int32(time.Now().Unix())
 
 	attachments = append(attachments, attachment)
