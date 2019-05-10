@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	alamo "taas/jobs"
+	akkeris "taas/jobs"
 	structs "taas/structs"
 
 	vault "github.com/akkeris/vault-client"
@@ -31,7 +31,7 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 
 		buildinfo.App.Name = payload.App.Name
 		buildinfo.Space.Name = payload.Space.Name
-		org, err := alamo.GetAppControllerOrg(buildinfo.App.Name + "-" + buildinfo.Space.Name)
+		org, err := akkeris.GetAppControllerOrg(buildinfo.App.Name + "-" + buildinfo.Space.Name)
 		if err != nil {
 			fmt.Println(err)
 		}
