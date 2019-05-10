@@ -104,6 +104,22 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 		fmt.Println(string(bodybytes))
 		PostPromoteToSlack(diagnostic, status)
 	}
+        if os.Getenv("ENABLE_DEBUG_SLACK_NOTIFICATIONS") == "true" {
+                debugslackurl := os.Getenv("DEBUG_SLACK_NOTIFICATION_URL")
+                req, err := http.NewRequest("POST", debugslackurl, bytes.NewBuffer(p))
+                if err != nil {
+                        fmt.Println(err)
+                }
+                req.Header.Add("Content-type", "application/json")
+                client := http.Client{}
+                resp, err := client.Do(req)
+                if err != nil {
+                        fmt.Println(err)
+                }
+                defer resp.Body.Close()
+                bodybytes, err := ioutil.ReadAll(resp.Body)
+                fmt.Println(string(bodybytes))
+        }
 }
 
 func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string) {
