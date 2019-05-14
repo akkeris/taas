@@ -83,7 +83,7 @@ Register tests
 	-   `aka taas:tests:trigger <name_of_test>` to trigger a test run.
 	-   Check `your_designated_slack_channel` for results
 
-List of available taas commands
+List of available TaaS commands
 ```aka taas:tests                              list tests
   aka taas:images                             list images
   aka taas:tests:info ID                      describe test
