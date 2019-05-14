@@ -26,8 +26,8 @@ type Slack struct {
 	Channel     string       `json:"channel"`
 	Username    string       `json:"username"`
 	Text        string       `json:"text"`
-        UnfurlLinks bool `json:"unfurl_links"`
-        UnfurlMedia bool `json:"unfurl_media"`
+	UnfurlLinks bool         `json:"unfurl_links"`
+	UnfurlMedia bool         `json:"unfurl_media"`
 	IconEmoji   string       `json:"icon_emoji"`
 	Attachments []Attachment `json:"attachments"`
 }
@@ -61,8 +61,8 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 	}
 	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
 	slack.Text = slack.Text + "Changes Made by: @" + diagnostic.CommitAuthor
-        slack.UnfurlLinks=false
-        slack.UnfurlMedia=false
+	slack.UnfurlLinks = false
+	slack.UnfurlMedia = false
 	var attachments []Attachment
 	var attachment Attachment
 
@@ -104,6 +104,22 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 		fmt.Println(string(bodybytes))
 		PostPromoteToSlack(diagnostic, status)
 	}
+        if os.Getenv("ENABLE_DEBUG_SLACK_NOTIFICATIONS") == "true" {
+                debugslackurl := os.Getenv("DEBUG_SLACK_NOTIFICATION_URL")
+                req, err := http.NewRequest("POST", debugslackurl, bytes.NewBuffer(p))
+                if err != nil {
+                        fmt.Println(err)
+                }
+                req.Header.Add("Content-type", "application/json")
+                client := http.Client{}
+                resp, err := client.Do(req)
+                if err != nil {
+                        fmt.Println(err)
+                }
+                defer resp.Body.Close()
+                bodybytes, err := ioutil.ReadAll(resp.Body)
+                fmt.Println(string(bodybytes))
+        }
 }
 
 func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string) {

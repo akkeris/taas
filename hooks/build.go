@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/render"
 	"io/ioutil"
 	"net/http"
 	"os"
-        vault "github.com/akkeris/vault-client"
-	alamo "taas/alamo"
+	akkeris "taas/jobs"
 	structs "taas/structs"
+
+	vault "github.com/akkeris/vault-client"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/render"
 )
 
 func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Render) {
@@ -30,7 +31,7 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 
 		buildinfo.App.Name = payload.App.Name
 		buildinfo.Space.Name = payload.Space.Name
-		org, err := alamo.GetAppControllerOrg(buildinfo.App.Name + "-" + buildinfo.Space.Name)
+		org, err := akkeris.GetAppControllerOrg(buildinfo.App.Name + "-" + buildinfo.Space.Name)
 		if err != nil {
 			fmt.Println(err)
 		}

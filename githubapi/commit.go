@@ -6,9 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-        vault "github.com/akkeris/vault-client"
 	"strings"
 	structs "taas/structs"
+
+	vault "github.com/akkeris/vault-client"
 )
 
 func GetCommitAuthor(version string) (s string, m string, e error) {

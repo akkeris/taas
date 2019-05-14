@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/lib/pq"
-	"github.com/nu7hatch/gouuid"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	structs "taas/structs"
+
+	_ "github.com/lib/pq"
+	"github.com/nu7hatch/gouuid"
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -27,7 +28,13 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	res, err := stmt.Exec(diagnosticspec.Job, diagnosticspec.JobSpace, diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom, diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay, diagnosticspec.Slackchannel, diagnosticspec.App, diagnosticspec.Space, diagnosticspec.Action, diagnosticspec.Result)
+	res, err := stmt.Exec(
+		diagnosticspec.Job, diagnosticspec.JobSpace, diagnosticspec.Image,
+		diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
+		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
+		diagnosticspec.Slackchannel, diagnosticspec.App, diagnosticspec.Space,
+		diagnosticspec.Action, diagnosticspec.Result,
+	)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -40,8 +47,8 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(rowCnt)
 	return nil
-
 }
+
 func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	newappiduuid, _ := uuid.NewV4()
@@ -56,17 +63,22 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	diagnosticspec.TransitionTo = strings.Replace(diagnosticspec.TransitionTo, " ", "", -1)
 
 	var id string
-	inserterr := db.QueryRow("INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id;", newappid, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action, diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace, diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom, diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay, diagnosticspec.Slackchannel).Scan(&id)
+	inserterr := db.QueryRow(
+		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id;",
+		newappid, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
+		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
+		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
+		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
+		diagnosticspec.Slackchannel,
+	).Scan(&id)
 	if inserterr != nil {
 		return inserterr
 	}
 
 	return nil
-
 }
 
 func CreateBind(diagnosticspec structs.DiagnosticSpec) (e error) {
-
 	type Bindspec struct {
 		App      string `json:"appname"`
 		Space    string `json:"space"`
@@ -85,8 +97,8 @@ func CreateBind(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1/space/"+bindspec.Space+"/app/"+bindspec.App+"/bind", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1/space/"+bindspec.Space+"/app/"+bindspec.App+"/bind", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -106,7 +118,6 @@ func CreateBind(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(string(bodybytes))
 	return nil
-
 }
 
 func CreateConfigSet(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -126,8 +137,8 @@ func CreateConfigSet(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1/config/set", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1/config/set", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -147,8 +158,8 @@ func CreateConfigSet(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(string(bodybytes))
 	return nil
-
 }
+
 func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var vars []structs.Varspec
@@ -204,8 +215,8 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1/config/set/configvar", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1/config/set/configvar", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -225,7 +236,6 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	fmt.Println(string(bodybytes))
 	return nil
-
 }
 
 func UpdateVar(vartoadd structs.Varspec) error {
@@ -236,8 +246,8 @@ func UpdateVar(vartoadd structs.Varspec) error {
 		return err
 	}
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("PATCH", alamoapiurl+"/v1/config/set/configvar", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("PATCH", akkerisapiurl+"/v1/config/set/configvar", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -270,8 +280,8 @@ func AddVar(vartoadd structs.Varspec) error {
 		return err
 	}
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1/config/set/configvar", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1/config/set/configvar", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -296,8 +306,8 @@ func AddVar(vartoadd structs.Varspec) error {
 
 func DeleteVar(diagnosticspec structs.DiagnosticSpec, varname string) error {
 	setname := diagnosticspec.Job + "-" + diagnosticspec.JobSpace + "-cs"
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/config/set/"+setname+"/configvar/"+varname, nil)
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("DELETE", akkerisapiurl+"/v1/config/set/"+setname+"/configvar/"+varname, nil)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -342,8 +352,8 @@ func CreateJob(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("POST", alamoapiurl+"/v1beta1/jobs", bytes.NewBuffer(p))
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/jobs", bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -401,8 +411,8 @@ func DeleteBind(diagnostic structs.DiagnosticSpec) (e error) {
 
 	bindname := diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/config:"+bindname, nil)
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("DELETE", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/bind/config:"+bindname, nil)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -429,8 +439,8 @@ func DeleteSet(diagnostic structs.DiagnosticSpec) (e error) {
 
 	bindname := diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1/config/set/"+bindname, nil)
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("DELETE", akkerisapiurl+"/v1/config/set/"+bindname, nil)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -455,8 +465,8 @@ func DeleteSet(diagnostic structs.DiagnosticSpec) (e error) {
 
 func DeleteJob(diagnostic structs.DiagnosticSpec) (e error) {
 
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
-	req, err := http.NewRequest("DELETE", alamoapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job, nil)
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+	req, err := http.NewRequest("DELETE", akkerisapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job, nil)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -489,7 +499,7 @@ func toAppSpace(full string)(s string, a string){
 
 func GetCurrentImage(app string)(i string){
        app, space  := toAppSpace(app)
-       req, err := http.NewRequest("GET", os.Getenv("ALAMO_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
+       req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
         if err != nil {
                 fmt.Println(err)
         }

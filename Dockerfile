@@ -6,7 +6,7 @@ ADD server.go  /go/src/taas/server.go
 ADD build.sh /build.sh
 RUN chmod +x /build.sh
 ADD notifications /go/src/taas/notifications
-ADD alamo /go/src/taas/alamo
+ADD jobs /go/src/taas/jobs
 ADD structs /go/src/taas/structs
 ADD diagnosticlogs /go/src/taas/diagnosticlogs
 ADD diagnostics /go/src/taas/diagnostics

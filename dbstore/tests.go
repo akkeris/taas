@@ -3,17 +3,19 @@ package dbstore
 import (
 	"database/sql"
 	"fmt"
-	"github.com/go-martini/martini"
-	_ "github.com/lib/pq"
 	structs "taas/structs"
-	//"github.com/martini-contrib/binding"
+
 	"encoding/json"
 	"encoding/xml"
-	"github.com/martini-contrib/render"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/go-martini/martini"
+	_ "github.com/lib/pq"
+
+	"github.com/martini-contrib/render"
 )
 
 func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {

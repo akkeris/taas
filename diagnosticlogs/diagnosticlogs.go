@@ -2,25 +2,24 @@ package diagnosticlogs
 
 import (
 	"bytes"
-	structs "taas/structs"
-	//"github.com/nu7hatch/gouuid"
 	"encoding/json"
 	"fmt"
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/render"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+	structs "taas/structs"
 	"time"
+
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/render"
 )
 
 func GetLogs(space string, job string, instance string) (l []string, e error) {
-	alamoapiurl := os.Getenv("ALAMO_API_URL")
+	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
 	var lines []string
-	req, err := http.NewRequest("GET", alamoapiurl+"/v1/space/"+space+"/app/"+job+"/instance/"+instance+"/log", nil)
+	req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+space+"/app/"+job+"/instance/"+instance+"/log", nil)
 	if err != nil {
 		fmt.Println(err)
 		return lines, err
@@ -47,94 +46,8 @@ func GetLogs(space string, job string, instance string) (l []string, e error) {
 		fmt.Println(err)
 		return lines, err
 	}
-	//        fmt.Println(log)
 	lines = strings.Split(log.Logs, "\n")
-	//       fmt.Println(lines)
 	return lines, nil
-
-}
-
-func WriteLog(logs structs.LogLines, berr binding.Errors, params martini.Params, r render.Render) {
-	if berr != nil {
-		fmt.Println(berr)
-	}
-	job := params["job"]
-	InternalWriteLog(job, logs)
-}
-
-func InternalWriteLog(job string, logs structs.LogLines) {
-	t := time.Now()
-	stamp := t.Format(time.RFC3339)
-	os.MkdirAll("./static/logs/"+job+"/", os.ModePerm)
-
-	file, err := os.OpenFile("./static/logs/"+job+"/log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	defer file.Close()
-
-	for _, element := range logs.Logs {
-		_, err = io.WriteString(file, stamp+" "+element+"\n")
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-
-}
-
-func WriteLogExtended(logs structs.LogLines, berr binding.Errors, params martini.Params, r render.Render) {
-	if berr != nil {
-		fmt.Println(berr)
-	}
-	job := params["job"]
-	jobspace := params["jobspace"]
-	InternalWriteLogExtended(jobspace, job, logs)
-}
-
-func InternalWriteLogExtended(jobspace string, job string, logs structs.LogLines) {
-	t := time.Now()
-	stamp := t.Format(time.RFC3339)
-
-	os.MkdirAll("./static/logs/jobspace/"+jobspace+"/job/"+job+"/", os.ModePerm)
-
-	file, err := os.OpenFile("./static/logs/jobspace/"+jobspace+"/job/"+job+"/log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	for _, element := range logs.Logs {
-
-		//		fmt.Println(stamp + " " + element)
-
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer file.Close()
-		_, err = io.WriteString(file, stamp+" "+element+"\n")
-	}
-
-}
-
-func Logs(params martini.Params, r render.Render) {
-	job := params["job"]
-	fmt.Println(job)
-	b, err := ioutil.ReadFile("./static/logs/" + job + "/log.txt")
-	if err != nil {
-		fmt.Print(err)
-	}
-	//fmt.Println(b)
-	str := string(b)
-	fmt.Println(str)
-	r.Text(200, str)
-
-}
-
-func LogsExtended(params martini.Params, r render.Render) {
-	job := params["job"]
-	jobspace := params["jobspace"]
-	fmt.Println(job)
-	b, err := ioutil.ReadFile("./static/logs/jobspace/" + jobspace + "/job/" + job + "/log.txt")
-	if err != nil {
-		fmt.Print(err)
-	}
-	fmt.Println(b)
-	str := string(b)
-	//fmt.Println(str)
-	r.Text(200, str)
-
 }
 
 func WriteLogES(diagnostic structs.DiagnosticSpec, logs structs.LogLines) {
@@ -204,7 +117,6 @@ func GetLogsES(params martini.Params, r render.Render) {
 		fmt.Println(err)
 		return
 	}
-	//                fmt.Println(string(bodybytes))
 
 	var logs structs.ESlogSpecOut1
 	err = json.Unmarshal(bodybytes, &logs)
@@ -247,7 +159,6 @@ func GetLogsESObj(params martini.Params, r render.Render) {
 		fmt.Println(err)
 		return
 	}
-	//                fmt.Println(string(bodybytes))
 
 	var logs structs.ESlogSpecOut1
 	err = json.Unmarshal(bodybytes, &logs)
@@ -255,7 +166,7 @@ func GetLogsESObj(params martini.Params, r render.Render) {
 		fmt.Println(err)
 		return
 	}
-	//fmt.Println(logs)
+
 	var logtext string
 	hrtimestamp := logs.Source.Hrtimestamp
 	var logobj []string
@@ -363,8 +274,6 @@ func getRuns(job string, jobspace string) (rl structs.RunList, e error) {
 	}
 	fmt.Println(runlist)
 	var cutlist structs.RunList
-	//listlen := len(runlist.Runs)
-	//startlen := listlen-10
 	endlen := 11
 	for index, element := range runlist.Runs {
 		if index < endlen {
@@ -405,7 +314,6 @@ func GetRunInfo(params martini.Params, r render.Render) {
 		fmt.Println(err)
 		return
 	}
-	//                fmt.Println(string(bodybytes))
 
 	var logs structs.ESlogSpecOut1
 	err = json.Unmarshal(bodybytes, &logs)
@@ -418,5 +326,4 @@ func GetRunInfo(params martini.Params, r render.Render) {
 	fmt.Println(logs)
 
 	r.JSON(200, logs)
-
 }

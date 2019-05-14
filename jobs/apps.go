@@ -6,8 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	vault "github.com/akkeris/vault-client"
 	structs "taas/structs"
+
+	vault "github.com/akkeris/vault-client"
 )
 
 func GetVersion(app string, space string, buildid string) (s string, e error) {
