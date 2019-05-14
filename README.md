@@ -47,7 +47,7 @@ Gather Info
 
 Register tests
 
--   Use Akkeris taas plugin to register tests, `aka taas:tests:register`
+-   Use Akkeris TaaS plugin to register tests, `aka taas:tests:register`
 
 -   Enter values requested by plugin as indicated below
 
