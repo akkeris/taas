@@ -5,5 +5,12 @@ static
 ldapapi-jam-stg
 version
 maru.sh
+bs1.env
+bs1.sh
+pch
+prh
+rh
+sensors
+ui
 
 

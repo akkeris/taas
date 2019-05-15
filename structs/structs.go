@@ -563,3 +563,93 @@ type SpaceInfo struct {
     UpdatedAt time.Time `json:"updated_at"`
 }
 
+
+type PreviewReleasedHookSpec struct {
+    App struct {
+        Name string `json:"name"`
+        ID   string `json:"id"`
+    } `json:"app"`
+    Space struct {
+        Name string `json:"name"`
+    } `json:"space"`
+    Dyno struct {
+        Type string `json:"type"`
+    } `json:"dyno"`
+    Key    string `json:"key"`
+    Action string `json:"action"`
+    Slug   struct {
+        Image      string `json:"image"`
+        SourceBlob struct {
+            Checksum string `json:"checksum"`
+            URL      string `json:"url"`
+            Version  string `json:"version"`
+            Commit   string `json:"commit"`
+            Author   string `json:"author"`
+            Repo     string `json:"repo"`
+            Branch   string `json:"branch"`
+            Message  string `json:"message"`
+        } `json:"source_blob"`
+        ID string `json:"id"`
+    } `json:"slug"`
+    ReleasedAt time.Time `json:"released_at"`
+    Release    struct {
+        ID        string    `json:"id"`
+        CreatedAt time.Time `json:"created_at"`
+        UpdatedAt time.Time `json:"updated_at"`
+        Version   int       `json:"version"`
+    } `json:"release"`
+    SourceApp struct {
+        ID   string `json:"id"`
+        Name string `json:"name"`
+    } `json:"source_app"`
+}
+
+type PreviewCreatedHookSpec  struct {
+    Action string `json:"action"`
+    App    struct {
+        Name string `json:"name"`
+        ID   string `json:"id"`
+    } `json:"app"`
+    Space struct {
+        Name string `json:"name"`
+    } `json:"space"`
+    Change  string `json:"change"`
+    Preview struct {
+        App struct {
+            Name string `json:"name"`
+            ID   string `json:"id"`
+        } `json:"app"`
+        AppSetup struct {
+            ID        string    `json:"id"`
+            CreatedAt time.Time `json:"created_at"`
+            UpdatedAt time.Time `json:"updated_at"`
+            App       struct {
+                ID   string `json:"id"`
+                Name string `json:"name"`
+            } `json:"app"`
+            Build struct {
+                ID              interface{} `json:"id"`
+                Status          string      `json:"status"`
+                OutputStreamURL interface{} `json:"output_stream_url"`
+            } `json:"build"`
+            Progress           int           `json:"progress"`
+            Status             string        `json:"status"`
+            FailureMessage     string        `json:"failure_message"`
+            ManifestErrors     []interface{} `json:"manifest_errors"`
+            Postdeploy         interface{}   `json:"postdeploy"`
+            ResolvedSuccessURL interface{}   `json:"resolved_success_url"`
+        } `json:"app_setup"`
+    } `json:"preview"`
+    Sites []struct {
+        ID     string `json:"id"`
+        Domain string `json:"domain"`
+        Region struct {
+            Name string `json:"name"`
+            ID   string `json:"id"`
+        } `json:"region"`
+        CreatedAt  time.Time     `json:"created_at"`
+        UpdatedAt  time.Time     `json:"updated_at"`
+        Compliance []interface{} `json:"compliance"`
+    } `json:"sites"`
+}
+

@@ -58,6 +58,10 @@ func main() {
 	m.Post("/v1/diagnostic/:provided/bind/**", diagnostics.BindDiagnosticSecret)
 	m.Delete("/v1/diagnostic/:provided/bind/**", diagnostics.UnbindDiagnosticSecret)
 
+        m.Post("/v1/previewreleasedhook", binding.Json(structs.PreviewReleasedHookSpec{}), hooks.PreviewReleasedHook)
+        m.Post("/v1/previewcreatedhook", binding.Json(structs.PreviewCreatedHookSpec{}), hooks.PreviewCreatedHook)
+
+
 	m.Post("/v1/diagnostic/:provided/config", binding.Json(structs.Varspec{}), diagnostics.SetConfig)
 	m.Delete("/v1/diagnostic/:provided/config/:varname", diagnostics.UnsetConfig)
 

@@ -51,7 +51,7 @@ func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
 		spew.Dump(element)
-		diagnostics.RunDiagnostic(element)
+		diagnostics.RunDiagnostic(element, false)
 	}
 
 }
