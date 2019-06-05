@@ -537,38 +537,8 @@ func updateDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	fmt.Println(diagnosticspec.Env)
-
-	existing, err := akkeris.GetVars(diagnosticspec.Job, diagnosticspec.JobSpace)
-	for _, element := range existing {
-		fmt.Println(element)
-		if !strings.HasPrefix(element.Name, "OCT_VAULT") && !strings.HasPrefix(element.Name, "DIAGNOSTIC") {
-			fmt.Println("DELETE:" + element.Name)
-			akkeris.DeleteVar(diagnosticspec, element.Name)
-		}
-	}
-
-	for _, element := range diagnosticspec.Env {
-		if !strings.HasPrefix(element.Name, "OCT_VAULT") && !strings.HasPrefix(element.Name, "DIAGNOSTIC") {
-			fmt.Println(element)
-			var currentvar structs.Varspec
-			currentvar.Varname = element.Name
-			currentvar.Varvalue = element.Value
-			currentvar.Setname = diagnosticspec.Job + "-" + diagnosticspec.JobSpace + "-cs"
-
-			err := akkeris.AddVar(currentvar)
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			err = akkeris.UpdateVar(currentvar)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
 	return nil
+
 }
 
 func GetDiagnosticsList(req *http.Request, params martini.Params, r render.Render) {
