@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+        "errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -239,7 +240,9 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 }
 
 func UpdateVar(vartoadd structs.Varspec) error {
-
+        if vartoadd.Varvalue == "[redacted]" {
+           return errors.New("unable to set value of "+vartoadd.Varname+" to "+vartoadd.Varvalue)
+        }
 	p, err := json.Marshal(vartoadd)
 	if err != nil {
 		fmt.Println(err)
@@ -271,6 +274,9 @@ func UpdateVar(vartoadd structs.Varspec) error {
 }
 
 func AddVar(vartoadd structs.Varspec) error {
+        if vartoadd.Varvalue == "[redacted]" {
+           return errors.New("unable to set value of "+vartoadd.Varname+" to "+vartoadd.Varvalue)
+        }
 	var vars []structs.Varspec
 	vars = append(vars, vartoadd)
 
