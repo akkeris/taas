@@ -973,14 +973,16 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 		err = akkeris.UpdateVar(varspec)
 		if err != nil {
 			fmt.Println(err)
-			r.JSON(500, map[string]interface{}{"response": err})
+			r.JSON(200, map[string]interface{}{"response": err.Error()})
+                        return
 		}
 	} else {
 		fmt.Println("Adding")
 		err = akkeris.AddVar(varspec)
 		if err != nil {
 			fmt.Println(err)
-			r.JSON(500, map[string]interface{}{"response": err})
+			r.JSON(200, map[string]interface{}{"response": err.Error()})
+                        return
 		}
 	}
 	r.JSON(200, map[string]interface{}{"response": "config variable set"})
