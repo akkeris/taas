@@ -11,7 +11,7 @@ import (
 	"os"
         "strings"
 	"time"
-
+        structs "taas/structs"
 	vault "github.com/akkeris/vault-client"
 )
 
@@ -62,6 +62,77 @@ func DeleteKubeJob(space string, jobName string) (e error) {
 
 	return nil
 }
+
+func Startpod(oneoff structs.OneOffSpec) string {
+        var oneoffpod structs.OneOffPod
+        oneoffpod.APIVersion = "v1"
+        oneoffpod.Kind = "Pod"
+        oneoffpod.Metadata.Namespace = oneoff.Space
+        oneoffpod.Metadata.Name = oneoff.Podname
+        oneoffpod.Metadata.Labels.Name = oneoff.Podname
+        oneoffpod.Metadata.Labels.Space = oneoff.Space
+        var cont structs.ContainerItem
+        cont.Name = oneoff.Podname
+        cont.Image = oneoff.Image
+        cont.Env = oneoff.Env
+        cont.ImagePullPolicy = "Always"
+        if oneoff.Command != "" {
+            cont.Command = append(cont.Command, oneoff.Command)
+        }
+        var si structs.SecretItem
+        si.Name = os.Getenv("KUBERNETES_IMAGE_PULL_SECRET")
+        cont.ImagePullSecrets = append(cont.ImagePullSecrets, si)
+        oneoffpod.Spec.Containers = append(oneoffpod.Spec.Containers, cont)
+        oneoffpod.Spec.RestartPolicy = "Never"
+        bodybytes, err := json.Marshal(oneoffpod)
+        if err != nil {
+                fmt.Println(err)
+        }
+        kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
+        kubernetesapiversion := os.Getenv("KUBERNETES_API_VERSION")
+        req, err := buildK8sRequest("POST", "https://"+kubernetesapiserver+"/api/"+kubernetesapiversion+"/namespaces/"+oneoff.Space+"/pods", bytes.NewBuffer(bodybytes))
+        req.Header.Add("Content-type", "application/json")
+fmt.Printf("%+v\n", req)
+        resp, doerr := client.Do(req)
+
+        if doerr != nil {
+                fmt.Println(err)
+        }
+        defer resp.Body.Close()
+        bodybytes, err = ioutil.ReadAll(resp.Body)
+        if err != nil {
+                fmt.Println(err)
+        }
+        fmt.Println(string(bodybytes))
+        return string(bodybytes)
+}
+
+
+func Deletepod(spacename string, pod string) string {
+        kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
+        kubernetesapiversion := os.Getenv("KUBERNETES_API_VERSION")
+        req, err :=buildK8sRequest("DELETE", "https://"+kubernetesapiserver+"/api/"+kubernetesapiversion+"/namespaces/"+spacename+"/pods/"+pod, nil)
+        if err != nil {
+                fmt.Println("Error creating request " + err.Error())
+        }
+        client := http.Client{}
+        resp, err := client.Do(req)
+
+        if err != nil {
+                fmt.Println(err)
+        }
+        defer resp.Body.Close()
+
+        defer resp.Body.Close()
+        bodybytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+                fmt.Println(err)
+        }
+        fmt.Println(string(bodybytes))
+        return string(bodybytes)
+
+}
+
 
 func deletePods(space string, podName string) (e error) {
 	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")

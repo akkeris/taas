@@ -563,3 +563,46 @@ type SpaceInfo struct {
     UpdatedAt time.Time `json:"updated_at"`
 }
 
+type OneOffSpec struct {
+        Space   string   `json:"space"`
+        Podname string   `json:"podname"`
+        Image   string   `json:"image"`
+        Command string   `json:"command,omitempty"`
+        Env     []EnvironmentVariable `json:"env"`
+}
+
+
+
+type OneOffPod struct {
+        APIVersion string `json:"apiVersion"`
+        Kind       string `json:"kind"`
+        Metadata   struct {
+                Name   string `json:"name"`
+                Labels struct {
+                        Name  string `json:"name"`
+                        Space string `json:"space"`
+                } `json:"labels"`
+                Namespace string `json:"namespace"`
+        } `json:"metadata"`
+        Spec struct {
+                Containers                    []ContainerItem `json:"containers"`
+                ImagePullPolicy               string          `json:"imagePullPolicy,omitempty"`
+                ImagePullSecrets              []SecretItem    `json:"imagePullSecrets"`
+                RestartPolicy                 string          `json:"restartPolicy"`
+                TerminationGracePeriodSeconds int             `json:"terminationGracePeriodSeconds"`
+        } `json:"spec"`
+}
+
+type ContainerItem struct {
+        Name             string          `json:"name"`
+        Image            string          `json:"image"`
+        Command          []string        `json:"command,omitempty"`
+        Env              []EnvironmentVariable        `json:"env,omitempty"`
+        ImagePullPolicy  string          `json:"imagePullPolicy,omitempty"`
+        ImagePullSecrets []SecretItem    `json:"imagePullSecrets,omitempty"`
+}
+
+type SecretItem struct {
+        Name string `json:"name"`
+}
+

@@ -81,44 +81,27 @@ func check(diagnostic structs.DiagnosticSpec) {
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
-	var jobrun structs.JobRunSpec
-   if strings.HasPrefix(diagnostic.Image,"akkeris://"){
+        var oneoff structs.OneOffSpec
+        oneoff.Space=diagnostic.JobSpace
+        oneoff.Podname=strings.ToLower(diagnostic.Job)
+ if strings.HasPrefix(diagnostic.Image,"akkeris://"){
        imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
        currentimage := akkeris.GetCurrentImage(imageappname)
-        jobrun.Image = currentimage
+        oneoff.Image = currentimage
         diagnostic.Image = currentimage
    }else{
        fmt.Println("assuming docker image url")
-        jobrun.Image = diagnostic.Image
+        oneoff.Image = diagnostic.Image
    }
 
-	jobrun.Image = diagnostic.Image
-	jobrun.DeleteBeforeCreate = true
-	jobrun.RestartPolicy = "Never"
-	jobrun.ActiveDeadlineSeconds = diagnostic.Timeout
-	p, err := json.Marshal(jobrun)
-	if err != nil {
-		fmt.Println(err)
-	}
-	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+        fetched, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
+        if err != nil {
+            fmt.Println(err)
+        }
+        oneoff.Env=fetched
 
-	akkeris.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
-
-	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/run", bytes.NewBuffer(p))
-	if err != nil {
-		fmt.Println(err)
-	}
-	req.Header.Add("Content-type", "application/json")
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
+        akkeris.Deletepod(oneoff.Space, oneoff.Podname)
+        akkeris.Startpod(oneoff)
 
 	time.Sleep(time.Second * 3)
 
@@ -131,7 +114,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
                 time.Sleep(time.Millisecond * 333)
 		akkerisapiurl := os.Getenv("AKKERIS_API_URL")
-		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
+		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+oneoff.Podname+"/instance", nil)
 		if err != nil {
 			fmt.Println(err)
 			return
