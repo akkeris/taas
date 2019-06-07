@@ -101,6 +101,7 @@ func check(diagnostic structs.DiagnosticSpec) {
         oneoff.Env=fetched
 
         akkeris.Deletepod(oneoff.Space, oneoff.Podname)
+        time.Sleep(time.Second * 5)
         akkeris.Startpod(oneoff)
 
 	time.Sleep(time.Second * 3)
@@ -128,6 +129,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 		}
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
+fmt.Println(string(bodybytes))
 		if err != nil {
 			fmt.Println(err)
 			return
