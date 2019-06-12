@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	dbstore "taas/dbstore"
@@ -36,8 +38,34 @@ func checkEnv() {
 	}
 }
 
+func createDB() {
+	uri := os.Getenv("DIAGNOSTICDB")
+	db, dberr := sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println("Error: Unable to run migration scripts - could not establish connection to DIAGNOSTICDB")
+		fmt.Println(dberr)
+		os.Exit(-1)
+	}
+	defer db.Close()
+
+	buf, err := ioutil.ReadFile("./create.sql")
+	if err != nil {
+		fmt.Println("Error: Unable to run migration scripts - could not load create.sql")
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+
+	_, err = db.Exec(string(buf))
+	if err != nil {
+		fmt.Println("Error: Unable to run migration scripts - execution failed")
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+}
+
 func main() {
 	checkEnv()
+	createDB()
 	artifacts.Init()
 	jobs.StartClient()
 	m := martini.Classic()

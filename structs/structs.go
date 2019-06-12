@@ -131,6 +131,7 @@ type DiagnosticSpec struct {
 	Env            []EnvironmentVariable `json:"env"`
 	RunID          string                `json:"runid"`
 	OverallStatus  string                `json:"overallstatus"`
+	Command        string                `json:"command"`
 }
 
 type ESlogSpecIn struct {
@@ -531,78 +532,76 @@ type Property struct {
 }
 
 type AppInfo struct {
-        Appname   string `json:"appname"`
-        Space     string `json:"space"`
-        Instances int    `json:"instances"`
-        Bindings  []struct {
-                Appname  string `json:"appname"`
-                Space    string `json:"space"`
-                Bindtype string `json:"bindtype"`
-                Bindname string `json:"bindname"`
-        } `json:"bindings"`
-        Plan        string `json:"plan"`
-        Healthcheck string `json:"healthcheck"`
-        Image       string `json:"image"`
+	Appname   string `json:"appname"`
+	Space     string `json:"space"`
+	Instances int    `json:"instances"`
+	Bindings  []struct {
+		Appname  string `json:"appname"`
+		Space    string `json:"space"`
+		Bindtype string `json:"bindtype"`
+		Bindname string `json:"bindname"`
+	} `json:"bindings"`
+	Plan        string `json:"plan"`
+	Healthcheck string `json:"healthcheck"`
+	Image       string `json:"image"`
 }
 
 type SpaceInfo struct {
-    Compliance []string  `json:"compliance"`
-    CreatedAt  time.Time `json:"created_at"`
-    ID         string    `json:"id"`
-    Name       string    `json:"name"`
-    Region     struct {
-        ID   string `json:"id"`
-        Name string `json:"name"`
-    } `json:"region"`
-    Stack struct {
-        ID   string `json:"id"`
-        Name string `json:"name"`
-    } `json:"stack"`
-    State     string    `json:"state"`
-    Apps      string    `json:"apps"`
-    UpdatedAt time.Time `json:"updated_at"`
+	Compliance []string  `json:"compliance"`
+	CreatedAt  time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Region     struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"region"`
+	Stack struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"stack"`
+	State     string    `json:"state"`
+	Apps      string    `json:"apps"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type OneOffSpec struct {
-        Space   string   `json:"space"`
-        Podname string   `json:"podname"`
-        Image   string   `json:"image"`
-        Command string   `json:"command,omitempty"`
-        Env     []EnvironmentVariable `json:"env"`
+	Space   string                `json:"space"`
+	Podname string                `json:"podname"`
+	Image   string                `json:"image"`
+	Command string                `json:"command,omitempty"`
+	Env     []EnvironmentVariable `json:"env"`
 }
 
-
-
 type OneOffPod struct {
-        APIVersion string `json:"apiVersion"`
-        Kind       string `json:"kind"`
-        Metadata   struct {
-                Name   string `json:"name"`
-                Labels struct {
-                        Name  string `json:"name"`
-                        Space string `json:"space"`
-                } `json:"labels"`
-                Namespace string `json:"namespace"`
-        } `json:"metadata"`
-        Spec struct {
-                Containers                    []ContainerItem `json:"containers"`
-                ImagePullPolicy               string          `json:"imagePullPolicy,omitempty"`
-                ImagePullSecrets              []SecretItem    `json:"imagePullSecrets"`
-                RestartPolicy                 string          `json:"restartPolicy"`
-                TerminationGracePeriodSeconds int             `json:"terminationGracePeriodSeconds"`
-        } `json:"spec"`
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+	Metadata   struct {
+		Name   string `json:"name"`
+		Labels struct {
+			Name  string `json:"name"`
+			Space string `json:"space"`
+		} `json:"labels"`
+		Namespace string `json:"namespace"`
+	} `json:"metadata"`
+	Spec struct {
+		Containers                    []ContainerItem `json:"containers"`
+		ImagePullPolicy               string          `json:"imagePullPolicy,omitempty"`
+		ImagePullSecrets              []SecretItem    `json:"imagePullSecrets"`
+		RestartPolicy                 string          `json:"restartPolicy"`
+		TerminationGracePeriodSeconds int             `json:"terminationGracePeriodSeconds"`
+	} `json:"spec"`
 }
 
 type ContainerItem struct {
-        Name             string          `json:"name"`
-        Image            string          `json:"image"`
-        Command          []string        `json:"command,omitempty"`
-        Env              []EnvironmentVariable        `json:"env,omitempty"`
-        ImagePullPolicy  string          `json:"imagePullPolicy,omitempty"`
-        ImagePullSecrets []SecretItem    `json:"imagePullSecrets,omitempty"`
+	Name             string                `json:"name"`
+	Image            string                `json:"image"`
+	Command          []string              `json:"command,omitempty"`
+	Args             []string              `json:"args,omitempty"`
+	Env              []EnvironmentVariable `json:"env,omitempty"`
+	ImagePullPolicy  string                `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []SecretItem          `json:"imagePullSecrets,omitempty"`
 }
 
 type SecretItem struct {
-        Name string `json:"name"`
+	Name string `json:"name"`
 }
-

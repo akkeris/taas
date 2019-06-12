@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-        "errors"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,7 +13,7 @@ import (
 	structs "taas/structs"
 
 	_ "github.com/lib/pq"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -24,17 +24,15 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	defer db.Close()
 	fmt.Println(diagnosticspec.Slackchannel)
-	stmt, err := db.Prepare("UPDATE diagnostics set job=$1, jobspace=$2,image=$3,pipelinename=$4,transitionfrom=$5,transitionto=$6,timeout=$7,startdelay=$8,slackchannel=$9 where app=$10 and space=$11 and action=$12 and result=$13")
+	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8 where job=$9")
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 	res, err := stmt.Exec(
-		diagnosticspec.Job, diagnosticspec.JobSpace, diagnosticspec.Image,
-		diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
+		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel, diagnosticspec.App, diagnosticspec.Space,
-		diagnosticspec.Action, diagnosticspec.Result,
+		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.Job,
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -65,12 +63,12 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var id string
 	inserterr := db.QueryRow(
-		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id;",
+		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning id;",
 		newappid, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
 		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel,
+		diagnosticspec.Slackchannel, diagnosticspec.Command,
 	).Scan(&id)
 	if inserterr != nil {
 		return inserterr
@@ -240,9 +238,9 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 }
 
 func UpdateVar(vartoadd structs.Varspec) error {
-        if vartoadd.Varvalue == "[redacted]" {
-           return errors.New("unable to set value of "+vartoadd.Varname+" to "+vartoadd.Varvalue)
-        }
+	if vartoadd.Varvalue == "[redacted]" {
+		return errors.New("unable to set value of " + vartoadd.Varname + " to " + vartoadd.Varvalue)
+	}
 	p, err := json.Marshal(vartoadd)
 	if err != nil {
 		fmt.Println(err)
@@ -274,9 +272,9 @@ func UpdateVar(vartoadd structs.Varspec) error {
 }
 
 func AddVar(vartoadd structs.Varspec) error {
-        if vartoadd.Varvalue == "[redacted]" {
-           return errors.New("unable to set value of "+vartoadd.Varname+" to "+vartoadd.Varvalue)
-        }
+	if vartoadd.Varvalue == "[redacted]" {
+		return errors.New("unable to set value of " + vartoadd.Varname + " to " + vartoadd.Varvalue)
+	}
 	var vars []structs.Varspec
 	vars = append(vars, vartoadd)
 
@@ -351,6 +349,7 @@ func CreateJob(diagnosticspec structs.DiagnosticSpec) (e error) {
 	jobreq.Name = diagnosticspec.Job
 	jobreq.Space = diagnosticspec.JobSpace
 	jobreq.Plan = "standard-s"
+	jobreq.CMD = diagnosticspec.Command
 
 	p, err := json.Marshal(jobreq)
 	if err != nil {
@@ -495,32 +494,30 @@ func DeleteJob(diagnostic structs.DiagnosticSpec) (e error) {
 
 }
 
-
-func toAppSpace(full string)(s string, a string){
-      parts := strings.Split(full,"-")
-      app := parts[0]
-      rest := parts[1:]
-      return app, strings.Join(rest,"-")
+func toAppSpace(full string) (s string, a string) {
+	parts := strings.Split(full, "-")
+	app := parts[0]
+	rest := parts[1:]
+	return app, strings.Join(rest, "-")
 }
 
-func GetCurrentImage(app string)(i string){
-       app, space  := toAppSpace(app)
-       req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
-        if err != nil {
-                fmt.Println(err)
-        }
-        client := http.Client{}
-        resp, err := client.Do(req)
-        if err != nil {
-                fmt.Println(err)
-        }
-        defer resp.Body.Close()
-        bodybytes, err := ioutil.ReadAll(resp.Body)
-        var appinfo structs.AppInfo
-        err = json.Unmarshal(bodybytes, &appinfo)
-        if err != nil {
-                fmt.Println(err)
-        }
-        return appinfo.Image
+func GetCurrentImage(app string) (i string) {
+	app, space := toAppSpace(app)
+	req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	var appinfo structs.AppInfo
+	err = json.Unmarshal(bodybytes, &appinfo)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return appinfo.Image
 }
-

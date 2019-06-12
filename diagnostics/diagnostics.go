@@ -11,11 +11,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	akkeris "taas/jobs"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
-        jobs "taas/jobs"
 	githubapi "taas/githubapi"
+	akkeris "taas/jobs"
+	jobs "taas/jobs"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
 	structs "taas/structs"
@@ -25,7 +25,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
@@ -38,39 +38,36 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	newvar.Varvalue = diagnostic.RunID
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
-      
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_RUNID"
-        newvar.Varvalue = diagnostic.RunID
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_ARTIFACT_REGION"
-        newvar.Varvalue = os.Getenv("AWS_REGION")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_RUNID"
+	newvar.Varvalue = diagnostic.RunID
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_AWS_ACCESS_KEY_ID"
-        newvar.Varvalue = os.Getenv("AWS_ACCESS_KEY_ID")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_ARTIFACT_REGION"
+	newvar.Varvalue = os.Getenv("AWS_REGION")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_AWS_SECRET_ACCESS_KEY"
-        newvar.Varvalue = os.Getenv("AWS_SECRET_ACCESS_KEY")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_AWS_ACCESS_KEY_ID"
+	newvar.Varvalue = os.Getenv("AWS_ACCESS_KEY_ID")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_ARTIFACT_BUCKET"
-        newvar.Varvalue = os.Getenv("AWS_S3_BUCKET")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_AWS_SECRET_ACCESS_KEY"
+	newvar.Varvalue = os.Getenv("AWS_SECRET_ACCESS_KEY")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-
-
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_ARTIFACT_BUCKET"
+	newvar.Varvalue = os.Getenv("AWS_S3_BUCKET")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
 	go check(diagnostic)
 	return nil
@@ -81,28 +78,28 @@ func check(diagnostic structs.DiagnosticSpec) {
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
-        var oneoff structs.OneOffSpec
-        oneoff.Space=diagnostic.JobSpace
-        oneoff.Podname=strings.ToLower(diagnostic.Job)
- if strings.HasPrefix(diagnostic.Image,"akkeris://"){
-       imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
-       currentimage := akkeris.GetCurrentImage(imageappname)
-        oneoff.Image = currentimage
-        diagnostic.Image = currentimage
-   }else{
-       fmt.Println("assuming docker image url")
-        oneoff.Image = diagnostic.Image
-   }
+	var oneoff structs.OneOffSpec
+	oneoff.Space = diagnostic.JobSpace
+	oneoff.Podname = strings.ToLower(diagnostic.Job)
+	if strings.HasPrefix(diagnostic.Image, "akkeris://") {
+		imageappname := strings.Replace(diagnostic.Image, "akkeris://", "", -1)
+		currentimage := akkeris.GetCurrentImage(imageappname)
+		oneoff.Image = currentimage
+		diagnostic.Image = currentimage
+	} else {
+		fmt.Println("assuming docker image url")
+		oneoff.Image = diagnostic.Image
+	}
+	oneoff.Command = diagnostic.Command
+	fetched, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
+	if err != nil {
+		fmt.Println(err)
+	}
+	oneoff.Env = fetched
 
-        fetched, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
-        if err != nil {
-            fmt.Println(err)
-        }
-        oneoff.Env=fetched
-
-        akkeris.Deletepod(oneoff.Space, oneoff.Podname)
-        time.Sleep(time.Second * 5)
-        akkeris.Startpod(oneoff)
+	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
+	time.Sleep(time.Second * 5)
+	akkeris.Startpod(oneoff)
 
 	time.Sleep(time.Second * 3)
 
@@ -111,9 +108,9 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var instance string
 	var overallstatus string
 	overallstatus = "timedout"
-        var i float64
-	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
-                time.Sleep(time.Millisecond * 333)
+	var i float64
+	for i = 0.0; i < float64(diagnostic.Timeout); i += 0.333 {
+		time.Sleep(time.Millisecond * 333)
 		akkerisapiurl := os.Getenv("AKKERIS_API_URL")
 		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+oneoff.Podname+"/instance", nil)
 		if err != nil {
@@ -129,7 +126,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 		}
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
-fmt.Println(string(bodybytes))
+		fmt.Println(string(bodybytes))
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -182,18 +179,18 @@ fmt.Println(string(bodybytes))
 			endtime = time.Now().UTC()
 			break
 		}
-                if status[0].Phase == "Running/running" && status[0].Appstatus[0].Readystatus==true {
-                        time2:=status[0].Appstatus[0].Startedat
-                        time1:=status[0].Starttime
-                        diff := time2.Sub(time1).Seconds()
-                        if diff > 10 {
-                          fmt.Printf("Diff: %v\n",diff)
-                          fmt.Println("JOB FAILED")
-                          overallstatus = "failed"
-                          endtime = time.Now().UTC()
-                          break
-                        }
-                }
+		if status[0].Phase == "Running/running" && status[0].Appstatus[0].Readystatus == true {
+			time2 := status[0].Appstatus[0].Startedat
+			time1 := status[0].Starttime
+			diff := time2.Sub(time1).Seconds()
+			if diff > 10 {
+				fmt.Printf("Diff: %v\n", diff)
+				fmt.Println("JOB FAILED")
+				overallstatus = "failed"
+				endtime = time.Now().UTC()
+				break
+			}
+		}
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
@@ -325,7 +322,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,command from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -344,11 +341,12 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 	var dtimeout int
 	var dstartdelay int
 	var dslackchannel string
+	var dcommand string
 
 	defer stmt.Close()
 	rows, err := stmt.Query(space, app, action, result)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -368,6 +366,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		diagnostic.Timeout = dtimeout
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
+		diagnostic.Command = dcommand
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -547,7 +546,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics order by app, space")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, command from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -567,11 +566,12 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 	var dtimeout int
 	var dstartdelay int
 	var dslackchannel string
+	var dcommand string
 
 	defer stmt.Close()
 	rows, err := stmt.Query()
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -591,6 +591,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		diagnostic.Timeout = dtimeout
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
+		diagnostic.Command = dcommand
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -673,31 +674,30 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
-        envvars:=diagnostic.Env
-        var newenvvars []structs.EnvironmentVariable
-        protectedspace, err := akkeris.IsProtectedSpace(diagnostic.Space)
-        if err != nil {
-                fmt.Println(err)
-                r.JSON(500, map[string]interface{}{"response": err.Error()})
-                return
-        }
-        for _, element := range envvars {
-           if (strings.HasPrefix(element.Name,"TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
-               continue
-           }
-            
- 
-           if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))){
-              var newvar structs.EnvironmentVariable
-              newvar.Name=element.Name
-              newvar.Value="[redacted]"
-              newenvvars=append(newenvvars, newvar)
-           }else{
-              newenvvars=append(newenvvars, element)
-           }
-        }
-       
-        diagnostic.Env=newenvvars
+	envvars := diagnostic.Env
+	var newenvvars []structs.EnvironmentVariable
+	protectedspace, err := akkeris.IsProtectedSpace(diagnostic.Space)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+	for _, element := range envvars {
+		if (strings.HasPrefix(element.Name, "TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
+			continue
+		}
+
+		if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))) {
+			var newvar structs.EnvironmentVariable
+			newvar.Name = element.Name
+			newvar.Value = "[redacted]"
+			newenvvars = append(newenvvars, newvar)
+		} else {
+			newenvvars = append(newenvvars, element)
+		}
+	}
+
+	diagnostic.Env = newenvvars
 	r.JSON(200, diagnostic)
 
 }
@@ -713,9 +713,9 @@ func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error
 	defer db.Close()
 	var selectstring string
 	if !isUUID(provided) {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics where job||'-'||jobspace = $1"
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, command from diagnostics where job||'-'||jobspace = $1"
 	} else {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics where id = $1"
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, command from diagnostics where id = $1"
 	}
 	stmt, err := db.Prepare(selectstring)
 	if err != nil {
@@ -736,10 +736,12 @@ func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error
 	var dtimeout int
 	var dstartdelay int
 	var dslackchannel string
+	var dcommand string
+
 	defer stmt.Close()
 	rows, err := stmt.Query(provided)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostic, err
@@ -758,6 +760,7 @@ func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error
 		diagnostic.Timeout = dtimeout
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
+		diagnostic.Command = dcommand
 		//runiduuid, _ := uuid.NewV4()
 		//runid := runiduuid.String()
 		//fmt.Println(runid)
@@ -959,7 +962,7 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 		if err != nil {
 			fmt.Println(err)
 			r.JSON(200, map[string]interface{}{"response": err.Error()})
-                        return
+			return
 		}
 	} else {
 		fmt.Println("Adding")
@@ -967,7 +970,7 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 		if err != nil {
 			fmt.Println(err)
 			r.JSON(200, map[string]interface{}{"response": err.Error()})
-                        return
+			return
 		}
 	}
 	r.JSON(200, map[string]interface{}{"response": "config variable set"})
