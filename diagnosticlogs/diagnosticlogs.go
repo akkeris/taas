@@ -124,13 +124,20 @@ func GetLogsES(params martini.Params, r render.Render) {
 		fmt.Println(err)
 		return
 	}
-	//fmt.Println(logs)
 	var logtext string
-	hrtimestamp := logs.Source.Hrtimestamp
-	testid := logs.Source.Testid
+        zone, _ := time.LoadLocation("Local")
 	for _, line := range logs.Source.Logs {
-		fmt.Println(hrtimestamp + " " + line)
-		logtext = logtext + hrtimestamp + " " + " " + testid + " " + line + "\n"
+                if line =="" {
+                  continue
+                }
+                mainpart:=strings.Split(strings.Split(line, " ")[0], ".")[0]
+                t, err := time.Parse("2006-01-02T15:04:05", mainpart)
+                if err != nil {
+                    fmt.Println(err)
+                }
+                tinzone:=t.In(zone)
+                tinzonestring := fmt.Sprintf("%s",tinzone.Format("2006-01-02 03:04:05 PM"))
+		logtext = logtext + "["+tinzonestring + "] "+strings.Join(strings.Split(line," ")[1:]," ")+"\n"
 	}
 
 	r.Text(200, logtext)
