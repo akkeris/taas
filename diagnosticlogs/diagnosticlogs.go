@@ -137,7 +137,7 @@ func GetLogsES(params martini.Params, r render.Render) {
                 }
                 tinzone:=t.In(zone)
                 tinzonestring := fmt.Sprintf("%s",tinzone.Format("2006-01-02 03:04:05 PM"))
-		logtext = logtext + "["+tinzonestring + "] "+strings.Join(strings.Split(line," ")[1:]," ")+"\n"
+		logtext = logtext + "["+tinzonestring + "]  "+strings.Join(strings.Split(line," ")[1:]," ")+"\n"
 	}
 
 	r.Text(200, logtext)

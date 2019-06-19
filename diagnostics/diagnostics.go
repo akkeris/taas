@@ -322,7 +322,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,command from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,'') from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -546,7 +546,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, command from diagnostics order by app, space")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
