@@ -125,7 +125,7 @@ func GetLogsES(params martini.Params, r render.Render) {
 		return
 	}
 	var logtext string
-        zone, _ := time.LoadLocation("Local")
+        zone, _ := time.LoadLocation(os.Getenv("LOG_TIMESTAMPS_LOCALE"))
 	for _, line := range logs.Source.Logs {
                 if line =="" {
                   continue
