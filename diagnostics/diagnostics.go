@@ -701,9 +701,9 @@ func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error
 	defer db.Close()
 	var selectstring string
 	if !isUUID(provided) {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, command from diagnostics where job||'-'||jobspace = $1"
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where job||'-'||jobspace = $1"
 	} else {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, command from diagnostics where id = $1"
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where id = $1"
 	}
 	stmt, err := db.Prepare(selectstring)
 	if err != nil {
