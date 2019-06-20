@@ -179,18 +179,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
-		if status[0].Phase == "Running/running" && status[0].Appstatus[0].Readystatus == true {
-			time2 := status[0].Appstatus[0].Startedat
-			time1 := status[0].Starttime
-			diff := time2.Sub(time1).Seconds()
-			if diff > 10 {
-				fmt.Printf("Diff: %v\n", diff)
-				fmt.Println("JOB FAILED")
-				overallstatus = "failed"
-				endtime = time.Now().UTC()
-				break
-			}
-		}
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
