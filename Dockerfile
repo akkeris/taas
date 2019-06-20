@@ -15,9 +15,11 @@ ADD pipelines /go/src/taas/pipelines
 ADD githubapi /go/src/taas/githubapi
 ADD dbstore /go/src/taas/dbstore
 ADD artifacts /go/src/taas/artifacts
+ADD create.sql /go/src/taas/create.sql
 RUN /build.sh
 ADD start.sh /start.sh
 RUN chmod +x /start.sh
 CMD ["/start.sh"]
+WORKDIR /go/src/taas
 EXPOSE 4000
 
