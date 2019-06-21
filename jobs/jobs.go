@@ -487,36 +487,39 @@ func CreateHooks(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
+	needsBuild := true
+	needsRelease := true
 	for _, hook := range hooks {
-		needsBuild := !strings.Contains(hook.URL, svcurl+"/v1/buildhook")
 		if needsBuild {
-			err := createHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
-			if err != nil {
-				fmt.Println("Error creating build hook - manual creation is needed")
-				fmt.Println(err)
-			}
-			break
+			needsBuild = !strings.Contains(hook.URL, svcurl+"/v1/buildhook")
 		}
-	}
-
-	for _, hook := range hooks {
-		needsRelease := !strings.Contains(hook.URL, svcurl+"/v1/releasehook")
 		if needsRelease {
-			err := createHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
-			if err != nil {
-				fmt.Println("Error creating build hook - manual creation is needed")
-				fmt.Println(err)
-			}
-			break
+			needsRelease = !strings.Contains(hook.URL, svcurl+"/v1/releasehook")
 		}
 	}
 
+	if needsBuild {
+		err := createHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
+		if err != nil {
+			fmt.Println("Error creating build hook - manual creation is needed")
+			fmt.Println(err)
+		}
+	}
+
+	if needsRelease {
+		err := createHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
+		if err != nil {
+			fmt.Println("Error creating build hook - manual creation is needed")
+			fmt.Println(err)
+		}
+	}
+
+	fmt.Println("All hooks present!")
 	return nil
 }
 
 func createHook(active bool, events []string, url string, secret string, app string) (e error) {
 	var controllerurl = os.Getenv("APP_CONTROLLER_URL")
-	fmt.Println(app)
 
 	var hook structs.AppHook
 	hook.Active = active
