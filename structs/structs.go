@@ -605,3 +605,13 @@ type ContainerItem struct {
 type SecretItem struct {
 	Name string `json:"name"`
 }
+
+type AppHook struct {
+	ID        string    `json:"id,omitempty"`
+	Active    bool      `json:"active"`
+	Events    []string  `json:"events"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	URL       string    `json:"url"`
+	Secret    string    `json:"secret,omitempty"`
+}

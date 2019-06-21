@@ -12,6 +12,7 @@ import (
 	"strings"
 	structs "taas/structs"
 
+	vault "github.com/akkeris/vault-client"
 	_ "github.com/lib/pq"
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -335,52 +336,6 @@ func DeleteVar(diagnosticspec structs.DiagnosticSpec, varname string) error {
 	return nil
 }
 
-func CreateJob(diagnosticspec structs.DiagnosticSpec) (e error) {
-
-	type JobReq struct {
-		Name     string `json:"name"`  // required
-		Space    string `json:"space"` // required
-		CMD      string `json:"cmd,omitempty"`
-		Schedule string `json:"schedule,omitempty"`
-		Plan     string `json:"plan"`
-	}
-
-	var jobreq JobReq
-	jobreq.Name = diagnosticspec.Job
-	jobreq.Space = diagnosticspec.JobSpace
-	jobreq.Plan = "standard-s"
-	jobreq.CMD = diagnosticspec.Command
-
-	p, err := json.Marshal(jobreq)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
-	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/jobs", bytes.NewBuffer(p))
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	req.Header.Add("Content-type", "application/json")
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	defer resp.Body.Close()
-	bodybytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	fmt.Println(string(bodybytes))
-	return nil
-
-}
-
 func DeleteService(diagnostic structs.DiagnosticSpec) (e error) {
 
 	uri := os.Getenv("DIAGNOSTICDB")
@@ -520,4 +475,76 @@ func GetCurrentImage(app string) (i string) {
 		fmt.Println(err)
 	}
 	return appinfo.Image
+}
+
+// CreateHooks - Check presence of build/release hooks on an app and add them if needed
+func CreateHooks(diagnosticspec structs.DiagnosticSpec) (e error) {
+	svcurl := os.Getenv("TAAS_SVC_URL")
+	appspace := diagnosticspec.App + "-" + diagnosticspec.Space
+
+	hooks, err := GetHooks(appspace)
+	if err != nil {
+		return err
+	}
+
+	for _, hook := range hooks {
+		needsBuild := !strings.Contains(hook.URL, svcurl+"/v1/buildhook")
+		if needsBuild {
+			err := createHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
+			if err != nil {
+				fmt.Println("Error creating build hook - manual creation is needed")
+				fmt.Println(err)
+			}
+			break
+		}
+	}
+
+	for _, hook := range hooks {
+		needsRelease := !strings.Contains(hook.URL, svcurl+"/v1/releasehook")
+		if needsRelease {
+			err := createHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
+			if err != nil {
+				fmt.Println("Error creating build hook - manual creation is needed")
+				fmt.Println(err)
+			}
+			break
+		}
+	}
+
+	return nil
+}
+
+func createHook(active bool, events []string, url string, secret string, app string) (e error) {
+	var controllerurl = os.Getenv("APP_CONTROLLER_URL")
+	fmt.Println(app)
+
+	var hook structs.AppHook
+	hook.Active = active
+	hook.Events = events
+	hook.URL = url
+	hook.Secret = secret
+
+	h, err := json.Marshal(hook)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", controllerurl+"/apps/"+app+"/hooks", bytes.NewBuffer(h))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(bodybytes))
+	return nil
 }

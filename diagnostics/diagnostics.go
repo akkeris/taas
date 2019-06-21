@@ -227,7 +227,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-        notifications.PostResults(result)
+	notifications.PostResults(result)
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
@@ -456,13 +456,7 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 }
 
 func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
-	err := akkeris.CreateJob(diagnosticspec)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	err = akkeris.CreateConfigSet(diagnosticspec)
+	err := akkeris.CreateConfigSet(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -478,6 +472,11 @@ func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 	err = akkeris.CreateService(diagnosticspec)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	err = akkeris.CreateHooks(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
