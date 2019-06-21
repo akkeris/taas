@@ -227,6 +227,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
+        notifications.PostResults(result)
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
