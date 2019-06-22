@@ -185,11 +185,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = akkeris.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0, 0)
-
-	if err != nil {
-		fmt.Println(err)
-	}
 	diagnostic.OverallStatus = overallstatus
 	var loglines structs.LogLines
 	loglines.Logs = logs
