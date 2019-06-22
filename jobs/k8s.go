@@ -153,54 +153,6 @@ func deletePods(space string, podName string) (e error) {
 	return err
 }
 
-func ScaleJob(space string, jobName string, replicas int, timeout int) (e error) {
-	if space == "" {
-		return errors.New("FATAL ERROR: Unable to scale job, space is blank.")
-	}
-	if jobName == "" {
-		return errors.New("FATAL ERROR: Unable to scale job, the jobName is blank.")
-	}
-	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
-	req, e := buildK8sRequest("GET", "https://"+kubernetesapiserver+"/apis/batch/v1/namespaces/"+space+"/jobs/"+jobName, nil)
-	if e != nil {
-		return e
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("Unable to get job on scale, kubernetes returned: " + resp.Status)
-	}
-	defer resp.Body.Close()
-	var job JobScaleGet
-	bodybytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(bodybytes, &job)
-	if err != nil {
-		return err
-	}
-	job.Spec.Parallelism = replicas
-	job.Spec.BackOffLimit = 0
-	p, err := json.Marshal(job)
-	if err != nil {
-		return err
-	}
-	req, e = buildK8sRequest("PUT", "https://"+kubernetesapiserver+"/apis/batch/v1/namespaces/"+space+"/jobs/"+jobName, bytes.NewBuffer(p))
-	if e != nil {
-		return e
-	}
-	resp, err = client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("Unable to scale job, kubernetes returned: " + resp.Status)
-	}
-	return nil
-}
 
 func kubernetesAPICall(method string, uri string) (re Response, err error) {
 	req, err := buildK8sRequest(method, uri, nil)
