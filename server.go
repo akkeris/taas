@@ -95,6 +95,8 @@ func main() {
 	m.Get("/v1/artifacts/:runid/", artifacts.Wrapper(artifacts.Awss3))
 	m.Get("/v1/artifacts/:runid/**", artifacts.Wrapper(artifacts.Awss3))
 
+	m.Post("/v1/diagnostic/:provided/hooks", diagnostics.CreateHooks)
+
 	m.Use(martini.Static("static"))
 	m.Run()
 }

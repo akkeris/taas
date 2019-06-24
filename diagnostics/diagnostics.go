@@ -447,7 +447,6 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 	}
 
 	r.JSON(200, map[string]interface{}{"status": "created"})
-
 }
 
 func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
@@ -471,7 +470,7 @@ func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	err = akkeris.CreateHooks(diagnosticspec)
+	err = akkeris.CreateHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -978,4 +977,27 @@ func UnsetConfig(params martini.Params, r render.Render) {
 	}
 	r.JSON(200, map[string]interface{}{"response": "config variable unset"})
 
+}
+
+func CreateHooks(params martini.Params, r render.Render) {
+	var diagnostic structs.DiagnosticSpec
+	provided := params["provided"]
+	diagnostic, err := getDiagnosticByNameOrID(provided)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err})
+	}
+	if diagnostic.ID == "" {
+		r.JSON(500, map[string]interface{}{"response": "invalid test"})
+		return
+	}
+
+	err = jobs.CreateHooks(diagnostic.App + "-" + diagnostic.Space)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+
+	r.JSON(200, map[string]interface{}{"status": "hooks added"})
 }

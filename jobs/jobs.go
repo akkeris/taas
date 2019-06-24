@@ -478,9 +478,9 @@ func GetCurrentImage(app string) (i string) {
 }
 
 // CreateHooks - Check presence of build/release hooks on an app and add them if needed
-func CreateHooks(diagnosticspec structs.DiagnosticSpec) (e error) {
+func CreateHooks(appspace string) (e error) {
 	svcurl := os.Getenv("TAAS_SVC_URL")
-	appspace := diagnosticspec.App + "-" + diagnosticspec.Space
+	var failedHooks []string
 
 	hooks, err := GetHooks(appspace)
 	if err != nil {
@@ -501,17 +501,23 @@ func CreateHooks(diagnosticspec structs.DiagnosticSpec) (e error) {
 	if needsBuild {
 		err := createHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
 		if err != nil {
-			fmt.Println("Error creating build hook - manual creation is needed")
+			fmt.Println("Error creating build hook")
 			fmt.Println(err)
+			failedHooks = append(failedHooks, "build")
 		}
 	}
 
 	if needsRelease {
 		err := createHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
 		if err != nil {
-			fmt.Println("Error creating build hook - manual creation is needed")
+			fmt.Println("Error creating release hook")
 			fmt.Println(err)
+			failedHooks = append(failedHooks, "release")
 		}
+	}
+
+	if len(failedHooks) != 0 {
+		return errors.New("One or more hooks failed to create: " + strings.Join(failedHooks, ","))
 	}
 
 	fmt.Println("All hooks present!")
