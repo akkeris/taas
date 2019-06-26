@@ -195,7 +195,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	}
 	fmt.Println("done")
 	fmt.Println(overallstatus)
-	notifications.PostToSlack(diagnostic, overallstatus)
 	var result structs.ResultSpec
 	result.Payload.Lifecycle = "finished"
 	result.Payload.Outcome = overallstatus
@@ -262,11 +261,13 @@ func check(diagnostic structs.DiagnosticSpec) {
 		promotion.Targets = targets
 		promotion.Pipeline.ID = pipelineid
 		promotion.Source.App.ID = fromappid
-		err = pipelines.PromoteApp(promotion)
+                promotestatus, err := pipelines.PromoteApp(promotion)
+                if err != nil {
+                        fmt.Println(err)
+                }
+                fmt.Println(promotestatus)
+                notifications.PostToSlack(diagnostic, overallstatus,promotestatus)
 
-		if err != nil {
-			fmt.Println(err)
-		}
 	}
 	return
 }

@@ -615,3 +615,25 @@ type AppHook struct {
 	URL       string    `json:"url"`
 	Secret    string    `json:"secret,omitempty"`
 }
+type PromoteStatus struct {
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Pipeline  struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"pipeline"`
+	Source struct {
+		App struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"app"`
+		Space struct {
+			Name string `json:"name"`
+		} `json:"space"`
+		Release struct {
+			ID string `json:"id"`
+		} `json:"release"`
+	} `json:"source"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
