@@ -222,6 +222,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 		fmt.Println(err)
 	}
 	notifications.PostResults(result)
+        var promotestatus string
+        promotestatus="failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
@@ -261,14 +263,13 @@ func check(diagnostic structs.DiagnosticSpec) {
 		promotion.Targets = targets
 		promotion.Pipeline.ID = pipelineid
 		promotion.Source.App.ID = fromappid
-                promotestatus, err := pipelines.PromoteApp(promotion)
+                promotestatus, err = pipelines.PromoteApp(promotion)
                 if err != nil {
                         fmt.Println(err)
                 }
                 fmt.Println(promotestatus)
-                notifications.PostToSlack(diagnostic, overallstatus,promotestatus)
-
 	}
+        notifications.PostToSlack(diagnostic, overallstatus,promotestatus)
 	return
 }
 
