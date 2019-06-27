@@ -18,6 +18,7 @@ import (
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
+        
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -25,7 +26,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	defer db.Close()
 	fmt.Println(diagnosticspec.Slackchannel)
-	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8 where job=$9")
+	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8 where job=$9 and jobspace=$10")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -33,7 +34,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	res, err := stmt.Exec(
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.Job,
+		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.Job,diagnosticspec.JobSpace,
 	)
 	if err != nil {
 		fmt.Println(err)
