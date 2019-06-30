@@ -134,6 +134,23 @@ type DiagnosticSpec struct {
 	Command        string                `json:"command"`
 }
 
+type DiagnosticSpecAudit struct {
+        ID             string                `json:"id"`
+        Space          string                `json:"space,omitempty"`
+        App            string                `json:"app,omitempty"`
+        Action         string                `json:"action,omitempty"`
+        Result         string                `json:"result,omitempty"`
+        Job            string                `json:"job,omitempty"`
+        JobSpace       string                `json:"jobspace,omitempty"`
+        Image          string                `json:"image"`
+        PipelineName   string                `json:"pipelinename"`
+        TransitionFrom string                `json:"transitionfrom"`
+        TransitionTo   string                `json:"transitionto"`
+        Timeout        int                   `json:"timeout"`
+        Startdelay     int                   `json:"startdelay"`
+        Slackchannel   string                `json:"slackchannel"`
+}
+
 type ESlogSpecIn struct {
 	Job           string   `json:"job"`
 	Jobspace      string   `json:"jobspace"`
@@ -636,4 +653,8 @@ type PromoteStatus struct {
 	} `json:"source"`
 	ID     string `json:"id"`
 	Status string `json:"status"`
+}
+
+type AuthUser struct {
+	Email                        string        `json:"email"`
 }

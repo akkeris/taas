@@ -15,6 +15,7 @@ ADD pipelines /go/src/taas/pipelines
 ADD githubapi /go/src/taas/githubapi
 ADD dbstore /go/src/taas/dbstore
 ADD artifacts /go/src/taas/artifacts
+ADD auth /go/src/taas/auth
 ADD create.sql /go/src/taas/create.sql
 RUN /build.sh
 ADD start.sh /start.sh

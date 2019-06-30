@@ -102,5 +102,16 @@ CREATE TABLE IF NOT EXISTS testsuite (
     hostname text
 );
 
+CREATE TABLE IF NOT EXISTS audits (
+  auditid text NOT NULL,
+  id text NOT NULL,
+  audituser text NOT NULL,
+  audittype text NOT NULL,
+  auditkey text,
+  newvalue text,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT pkey_audits PRIMARY KEY (auditid)
+);
+
 END
 $$;

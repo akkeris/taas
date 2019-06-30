@@ -419,7 +419,7 @@ func deleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	return nil
 }
 
-func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
+func CreateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
 
 	if berr != nil {
 		fmt.Println(berr)
@@ -440,6 +440,9 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		defaultstartdelay, _ := strconv.Atoi(os.Getenv("DEFAULT_START_DELAY"))
 		diagnosticspec.Startdelay = defaultstartdelay
 	}
+        newappiduuid, _ := uuid.NewV4()
+        newappid := newappiduuid.String()
+        diagnosticspec.ID = newappid
 	err = createDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
@@ -447,7 +450,7 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		return
 
 	}
-
+        dbstore.AddDiagnosticCreateAudit(req,diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "created"})
 }
 
@@ -481,12 +484,11 @@ func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 	return nil
 }
 
-func UpdateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
+func UpdateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 	}
-	fmt.Println(diagnosticspec)
 	err := updateDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
@@ -494,7 +496,7 @@ func UpdateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		return
 
 	}
-
+        dbstore.AddDiagnosticUpdateAudit(req,diagnosticspec) 
 	r.JSON(200, map[string]interface{}{"status": "updated"})
 
 }
@@ -913,7 +915,7 @@ func IsValidTest(test string) (v bool, e error) {
 	return isvalid, nil
 }
 
-func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Errors, r render.Render) {
+func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec, berr binding.Errors, r render.Render) {
 
 	if berr != nil {
 		fmt.Println(berr)
@@ -957,11 +959,12 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 			return
 		}
 	}
+        dbstore.AddConfigSetAudit(req, diagnostic.ID, varspec)
 	r.JSON(200, map[string]interface{}{"response": "config variable set"})
 
 }
 
-func UnsetConfig(params martini.Params, r render.Render) {
+func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 	varname := params["varname"]
 	provided := params["provided"]
 	fmt.Println(varname)
@@ -977,6 +980,7 @@ func UnsetConfig(params martini.Params, r render.Render) {
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
+        dbstore.AddConfigUnsetAudit(req, diagnostic.ID, varname)
 	r.JSON(200, map[string]interface{}{"response": "config variable unset"})
 
 }

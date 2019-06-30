@@ -52,8 +52,6 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
-	newappiduuid, _ := uuid.NewV4()
-	newappid := newappiduuid.String()
 
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
@@ -66,7 +64,7 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	var id string
 	inserterr := db.QueryRow(
 		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning id;",
-		newappid, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
+		diagnosticspec.ID, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
 		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
