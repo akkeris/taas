@@ -660,3 +660,12 @@ type AuthUser struct {
         Cn                           string        `json:"cn"`
 }
 
+type Audit struct {
+        Auditid string `json:"auditid"`
+        Id string `json:"id"`
+        Audituser string `json:"audituser"`
+        Audittype string `json:"audittype"`
+        Auditkey string `json:"auditkey"`
+        Newvalue string `json:"newvalue"`
+        Createdat time.Time `json:"created_at"`
+}

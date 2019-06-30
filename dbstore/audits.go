@@ -11,6 +11,9 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"net/http"
 	auth "taas/auth"
+        "github.com/go-martini/martini"
+        "github.com/martini-contrib/render"
+        "time"
 )
 
 var db *sql.DB
@@ -120,14 +123,14 @@ func AddDiagnosticCreateAudit(req *http.Request, diagnostic structs.DiagnosticSp
         }
         fmt.Println(string(bodybytes))
 
-        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, newvalue) values ($1,$2,$3,$4,$5)"
+        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5, $6)"
 
         stmt, err := db.Prepare(stmtstring)
         if err != nil {
                 db.Close()
         }
 
-        _, inserterr := stmt.Exec(auditid, diagnosticaudit.ID, user, "register", string(bodybytes))
+        _, inserterr := stmt.Exec(auditid, diagnosticaudit.ID, user, "register", diagnostic.Job+"-"+diagnostic.JobSpace, string(bodybytes))
         if inserterr != nil {
                 fmt.Println(inserterr)
         }
@@ -156,16 +159,51 @@ func AddDiagnosticUpdateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	}
 	fmt.Println(string(bodybytes))
 
-	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, newvalue) values ($1,$2,$3,$4,$5)"
+	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5,$6)"
 
 	stmt, err := db.Prepare(stmtstring)
 	if err != nil {
 		db.Close()
 	}
 
-	_, inserterr := stmt.Exec(auditid, diagnosticaudit.ID, user, "properties", string(bodybytes))
+	_, inserterr := stmt.Exec(auditid, diagnosticaudit.ID, user, "properties", diagnostic.Job+"-"+diagnostic.JobSpace, string(bodybytes))
 	if inserterr != nil {
 		fmt.Println(inserterr)
 	}
 
+}
+
+func GetAudits(params martini.Params, r render.Render){
+     id := params["id"]
+
+     stmt, err := db.Prepare("select auditid, id,  audituser, audittype, coalesce(auditkey,null,''), coalesce(newvalue,null,''), created_at from audits where id = $1 order by created_at asc")
+     if err != nil {
+             fmt.Println(err)
+     }     
+     defer stmt.Close()
+     var audits []structs.Audit
+     rows, err := stmt.Query(id)
+     for rows.Next() {
+                var auditid string
+                var id string
+                var audituser string
+                var audittype string
+                var auditkey string
+                var newvalue string
+                var created_at time.Time
+                err := rows.Scan(&auditid, &id,  &audituser, &audittype, &auditkey, &newvalue, &created_at)
+                if err != nil {
+                        fmt.Println(err)
+                }
+                var audit structs.Audit
+                audit.Auditid = auditid
+                audit.Id = id
+                audit.Audituser = audituser
+                audit.Audittype = audittype
+                audit.Auditkey = auditkey
+                audit.Newvalue = newvalue
+                audit.Createdat = created_at
+                audits = append(audits, audit)
+     }
+     r.JSON(200, audits)
 }
