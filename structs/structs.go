@@ -657,4 +657,6 @@ type PromoteStatus struct {
 
 type AuthUser struct {
 	Email                        string        `json:"email"`
+        Cn                           string        `json:"cn"`
 }
+

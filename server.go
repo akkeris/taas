@@ -66,6 +66,7 @@ func createDB() {
 func main() {
 	checkEnv()
 	createDB()
+        dbstore.InitAuditPool()
 	artifacts.Init()
 	jobs.StartClient()
 	m := martini.Classic()

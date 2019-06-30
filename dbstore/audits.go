@@ -13,17 +13,24 @@ import (
 	auth "taas/auth"
 )
 
+var db *sql.DB
+
+func InitAuditPool(){
+        uri := os.Getenv("DIAGNOSTICDB")
+        var dberr error
+        db, dberr = sql.Open("postgres", uri)
+        if dberr != nil {
+                fmt.Println(dberr)
+                os.Exit(1)
+        }
+
+}
 func AddConfigUnsetAudit(req *http.Request, id string, auditkey string){
         audituuid, _ := uuid.NewV4()
         auditid := audituuid.String()
         user, err := auth.GetUser(req)
         if err != nil {
                 fmt.Println(err)
-        }
-        uri := os.Getenv("DIAGNOSTICDB")
-        db, dberr := sql.Open("postgres", uri)
-        if dberr != nil {
-                fmt.Println(dberr)
         }
         var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
 
@@ -46,11 +53,6 @@ func AddConfigSetAudit(req *http.Request, id string, varspec structs.Varspec){
         user, err := auth.GetUser(req)
         if err != nil {
                 fmt.Println(err)
-        }
-        uri := os.Getenv("DIAGNOSTICDB")
-        db, dberr := sql.Open("postgres", uri)
-        if dberr != nil {
-                fmt.Println(dberr)
         }
         var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5,$6)"
 
@@ -76,11 +78,6 @@ func AddDiagnosticDeleteAudit(req *http.Request, diagnostic structs.DiagnosticSp
                 fmt.Println(err)
         }
         fmt.Println(string(bodybytes))
-        uri := os.Getenv("DIAGNOSTICDB")
-        db, dberr := sql.Open("postgres", uri)
-        if dberr != nil {
-                fmt.Println(dberr)
-        }
 
         var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5,$6)"
 
@@ -122,11 +119,6 @@ func AddDiagnosticCreateAudit(req *http.Request, diagnostic structs.DiagnosticSp
                 fmt.Println(err)
         }
         fmt.Println(string(bodybytes))
-        uri := os.Getenv("DIAGNOSTICDB")
-        db, dberr := sql.Open("postgres", uri)
-        if dberr != nil {
-                fmt.Println(dberr)
-        }
 
         var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, newvalue) values ($1,$2,$3,$4,$5)"
 
@@ -163,11 +155,6 @@ func AddDiagnosticUpdateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 		fmt.Println(err)
 	}
 	fmt.Println(string(bodybytes))
-	uri := os.Getenv("DIAGNOSTICDB")
-	db, dberr := sql.Open("postgres", uri)
-	if dberr != nil {
-		fmt.Println(dberr)
-	}
 
 	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, newvalue) values ($1,$2,$3,$4,$5)"
 
