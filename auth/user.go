@@ -16,6 +16,7 @@ func GetUser(req *http.Request) (u string, e error) {
 		return "", err
 	}
 	req.Header.Set("Authorization", authheader)
+        req.Header.Add("Accept", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
