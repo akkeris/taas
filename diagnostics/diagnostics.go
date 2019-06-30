@@ -366,7 +366,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 
 }
 
-func DeleteDiagnostic(params martini.Params, r render.Render) {
+func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
 	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
 	if err != nil {
 		fmt.Println(err)
@@ -385,7 +385,7 @@ func DeleteDiagnostic(params martini.Params, r render.Render) {
 		return
 
 	}
-
+        dbstore.AddDiagnosticDeleteAudit(req, diagnostic)
 	r.JSON(200, map[string]interface{}{"status": "deleted"})
 
 }

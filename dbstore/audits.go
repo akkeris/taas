@@ -64,6 +64,37 @@ func AddConfigSetAudit(req *http.Request, id string, varspec structs.Varspec){
                 fmt.Println(inserterr)
         }
  }
+func AddDiagnosticDeleteAudit(req *http.Request, diagnostic structs.DiagnosticSpec){
+        audituuid, _ := uuid.NewV4()
+        auditid := audituuid.String()
+        user, err := auth.GetUser(req)
+        if err != nil {
+                fmt.Println(err)
+        }
+        bodybytes, err := json.Marshal(diagnostic)
+        if err != nil {
+                fmt.Println(err)
+        }
+        fmt.Println(string(bodybytes))
+        uri := os.Getenv("DIAGNOSTICDB")
+        db, dberr := sql.Open("postgres", uri)
+        if dberr != nil {
+                fmt.Println(dberr)
+        }
+
+        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5,$6)"
+
+        stmt, err := db.Prepare(stmtstring)
+        if err != nil {
+                db.Close()
+        }
+
+        _, inserterr := stmt.Exec(auditid, diagnostic.ID, user, "destroy", diagnostic.Job+"-"+diagnostic.JobSpace, string(bodybytes))
+        if inserterr != nil {
+                fmt.Println(inserterr)
+        }
+} 
+ 
 func AddDiagnosticCreateAudit(req *http.Request, diagnostic structs.DiagnosticSpec) {
         var diagnosticaudit structs.DiagnosticSpecAudit
         diagnosticaudit.ID = diagnostic.ID
