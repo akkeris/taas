@@ -584,6 +584,7 @@ type SpaceInfo struct {
 type OneOffSpec struct {
 	Space   string                `json:"space"`
 	Podname string                `json:"podname"`
+        Containername string          `json:"containername"`
 	Image   string                `json:"image"`
 	Command string                `json:"command,omitempty"`
 	Env     []EnvironmentVariable `json:"env"`

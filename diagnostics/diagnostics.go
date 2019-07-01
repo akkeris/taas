@@ -81,6 +81,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var oneoff structs.OneOffSpec
 	oneoff.Space = diagnostic.JobSpace
 	oneoff.Podname = strings.ToLower(diagnostic.Job)+"-"+diagnostic.RunID
+        oneoff.Containername = strings.ToLower(diagnostic.Job)
 	if strings.HasPrefix(diagnostic.Image, "akkeris://") {
 		imageappname := strings.Replace(diagnostic.Image, "akkeris://", "", -1)
 		currentimage := akkeris.GetCurrentImage(imageappname)

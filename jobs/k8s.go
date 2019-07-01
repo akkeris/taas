@@ -74,7 +74,7 @@ func Startpod(oneoff structs.OneOffSpec) string {
 	oneoffpod.Metadata.Labels.Name = oneoff.Podname
 	oneoffpod.Metadata.Labels.Space = oneoff.Space
 	var cont structs.ContainerItem
-	cont.Name = oneoff.Podname
+	cont.Name = oneoff.Containername
 	cont.Image = oneoff.Image
 	cont.Env = oneoff.Env
 	cont.ImagePullPolicy = "Always"
@@ -246,7 +246,7 @@ func GetTestLogs(jobspace string, job string, instance string) (l []string, e er
 	limitBytes := "10000000"
 	var lines []string
 	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
-	req, e := buildK8sRequest("GET", "https://"+kubernetesapiserver+"/api/v1/namespaces/"+jobspace+"/pods/"+instance+"/log?timestamps=true&limitBytes="+limitBytes+"&container="+instance, nil)
+	req, e := buildK8sRequest("GET", "https://"+kubernetesapiserver+"/api/v1/namespaces/"+jobspace+"/pods/"+instance+"/log?timestamps=true&limitBytes="+limitBytes+"&container="+job, nil)
 	if e != nil {
 		return lines, e
 	}
