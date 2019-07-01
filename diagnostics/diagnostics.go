@@ -80,7 +80,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 	var oneoff structs.OneOffSpec
 	oneoff.Space = diagnostic.JobSpace
-	oneoff.Podname = strings.ToLower(diagnostic.Job)
+	oneoff.Podname = strings.ToLower(diagnostic.Job)+"-"+diagnostic.RunID
 	if strings.HasPrefix(diagnostic.Image, "akkeris://") {
 		imageappname := strings.Replace(diagnostic.Image, "akkeris://", "", -1)
 		currentimage := akkeris.GetCurrentImage(imageappname)
@@ -270,6 +270,7 @@ func check(diagnostic structs.DiagnosticSpec) {
                 fmt.Println(promotestatus)
 	}
         notifications.PostToSlack(diagnostic, overallstatus,promotestatus)
+        akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
 

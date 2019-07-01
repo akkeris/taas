@@ -246,7 +246,7 @@ func GetTestLogs(jobspace string, job string, instance string) (l []string, e er
 	limitBytes := "10000000"
 	var lines []string
 	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
-	req, e := buildK8sRequest("GET", "https://"+kubernetesapiserver+"/api/v1/namespaces/"+jobspace+"/pods/"+instance+"/log?timestamps=true&limitBytes="+limitBytes+"&container="+job, nil)
+	req, e := buildK8sRequest("GET", "https://"+kubernetesapiserver+"/api/v1/namespaces/"+jobspace+"/pods/"+instance+"/log?timestamps=true&limitBytes="+limitBytes+"&container="+instance, nil)
 	if e != nil {
 		return lines, e
 	}
