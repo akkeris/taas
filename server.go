@@ -66,7 +66,7 @@ func createDB() {
 func main() {
 	checkEnv()
 	createDB()
-        dbstore.InitAuditPool()
+	dbstore.InitAuditPool()
 	artifacts.Init()
 	jobs.StartClient()
 	m := martini.Classic()
@@ -97,8 +97,8 @@ func main() {
 	m.Get("/v1/artifacts/:runid/**", artifacts.Wrapper(artifacts.Awss3))
 
 	m.Post("/v1/diagnostic/:provided/hooks", diagnostics.CreateHooks)
-   
-        m.Get("/v1/diagnostic/:id/audits", dbstore.GetAudits)
+
+	m.Get("/v1/diagnostic/:provided/audits", dbstore.GetAudits)
 	m.Use(martini.Static("static"))
 	m.Run()
 }
