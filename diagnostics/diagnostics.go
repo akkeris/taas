@@ -80,8 +80,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 	var oneoff structs.OneOffSpec
 	oneoff.Space = diagnostic.JobSpace
-	oneoff.Podname = strings.ToLower(diagnostic.Job)+"-"+diagnostic.RunID
-        oneoff.Containername = strings.ToLower(diagnostic.Job)
+	oneoff.Podname = strings.ToLower(diagnostic.Job) + "-" + diagnostic.RunID
+	oneoff.Containername = strings.ToLower(diagnostic.Job)
 	if strings.HasPrefix(diagnostic.Image, "akkeris://") {
 		imageappname := strings.Replace(diagnostic.Image, "akkeris://", "", -1)
 		currentimage := akkeris.GetCurrentImage(imageappname)
@@ -223,8 +223,8 @@ func check(diagnostic structs.DiagnosticSpec) {
 		fmt.Println(err)
 	}
 	notifications.PostResults(result)
-        var promotestatus string
-        promotestatus="failed"
+	var promotestatus string
+	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
@@ -264,14 +264,14 @@ func check(diagnostic structs.DiagnosticSpec) {
 		promotion.Targets = targets
 		promotion.Pipeline.ID = pipelineid
 		promotion.Source.App.ID = fromappid
-                promotestatus, err = pipelines.PromoteApp(promotion)
-                if err != nil {
-                        fmt.Println(err)
-                }
-                fmt.Println(promotestatus)
+		promotestatus, err = pipelines.PromoteApp(promotion)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(promotestatus)
 	}
-        notifications.PostToSlack(diagnostic, overallstatus,promotestatus)
-        akkeris.Deletepod(oneoff.Space, oneoff.Podname)
+	notifications.PostToSlack(diagnostic, overallstatus, promotestatus)
+	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
 
@@ -369,7 +369,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 }
 
 func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
-	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
@@ -387,7 +387,7 @@ func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render)
 		return
 
 	}
-        dbstore.AddDiagnosticDeleteAudit(req, diagnostic)
+	dbstore.AddDiagnosticDeleteAudit(req, diagnostic)
 	r.JSON(200, map[string]interface{}{"status": "deleted"})
 
 }
@@ -442,9 +442,9 @@ func CreateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, 
 		defaultstartdelay, _ := strconv.Atoi(os.Getenv("DEFAULT_START_DELAY"))
 		diagnosticspec.Startdelay = defaultstartdelay
 	}
-        newappiduuid, _ := uuid.NewV4()
-        newappid := newappiduuid.String()
-        diagnosticspec.ID = newappid
+	newappiduuid, _ := uuid.NewV4()
+	newappid := newappiduuid.String()
+	diagnosticspec.ID = newappid
 	err = createDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
@@ -452,7 +452,7 @@ func CreateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, 
 		return
 
 	}
-        dbstore.AddDiagnosticCreateAudit(req,diagnosticspec)
+	dbstore.AddDiagnosticCreateAudit(req, diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "created"})
 }
 
@@ -498,7 +498,7 @@ func UpdateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, 
 		return
 
 	}
-        dbstore.AddDiagnosticUpdateAudit(req,diagnosticspec) 
+	dbstore.AddDiagnosticUpdateAudit(req, diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "updated"})
 
 }
@@ -653,7 +653,7 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 	var diagnostic structs.DiagnosticSpec
 
 	provided := params["provided"]
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
@@ -690,79 +690,6 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 
 }
 
-func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error) {
-	var diagnostic structs.DiagnosticSpec
-	uri := os.Getenv("DIAGNOSTICDB")
-	db, dberr := sql.Open("postgres", uri)
-	if dberr != nil {
-		fmt.Println(dberr)
-		return diagnostic, dberr
-	}
-	defer db.Close()
-	var selectstring string
-	if !isUUID(provided) {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where job||'-'||jobspace = $1"
-	} else {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where id = $1"
-	}
-	stmt, err := db.Prepare(selectstring)
-	if err != nil {
-		fmt.Println(err)
-		return diagnostic, err
-	}
-	var did string
-	var dspace string
-	var dapp string
-	var daction string
-	var dresult string
-	var djob string
-	var djobspace string
-	var dimage string
-	var dpipelinename string
-	var dtransitionfrom string
-	var dtransitionto string
-	var dtimeout int
-	var dstartdelay int
-	var dslackchannel string
-	var dcommand string
-
-	defer stmt.Close()
-	rows, err := stmt.Query(provided)
-	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
-		if err != nil {
-			fmt.Println(err)
-			return diagnostic, err
-		}
-		diagnostic.ID = did
-		diagnostic.Space = dspace
-		diagnostic.App = dapp
-		diagnostic.Action = daction
-		diagnostic.Result = dresult
-		diagnostic.Job = djob
-		diagnostic.JobSpace = djobspace
-		diagnostic.Image = dimage
-		diagnostic.PipelineName = dpipelinename
-		diagnostic.TransitionFrom = dtransitionfrom
-		diagnostic.TransitionTo = dtransitionto
-		diagnostic.Timeout = dtimeout
-		diagnostic.Startdelay = dstartdelay
-		diagnostic.Slackchannel = dslackchannel
-		diagnostic.Command = dcommand
-		//runiduuid, _ := uuid.NewV4()
-		//runid := runiduuid.String()
-		//fmt.Println(runid)
-		//diagnostic.RunID = runid
-		envvars, _ := akkeris.GetVars(djob, djobspace)
-		diagnostic.Env = envvars
-	}
-
-	db.Close()
-
-	return diagnostic, nil
-
-}
-
 func BindDiagnosticSecret(params martini.Params, r render.Render) {
 	provided := params["provided"]
 	spec := params["_1"]
@@ -772,7 +699,7 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 	}
 	fmt.Println(provided)
 	fmt.Println(spec)
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 
 	if err != nil {
 		fmt.Println(err)
@@ -831,7 +758,7 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 	}
 	fmt.Println(provided)
 	fmt.Println(spec)
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 
 	if err != nil {
 		fmt.Println(err)
@@ -874,6 +801,7 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 	r.JSON(200, map[string]interface{}{"response": "secret removed"})
 
 }
+
 func isUUID(uuid string) bool {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$")
 	return r.MatchString(uuid)
@@ -923,7 +851,7 @@ func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 	}
-	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
@@ -961,7 +889,7 @@ func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec
 			return
 		}
 	}
-        dbstore.AddConfigSetAudit(req, diagnostic.ID, varspec)
+	dbstore.AddConfigSetAudit(req, diagnostic.ID, varspec)
 	r.JSON(200, map[string]interface{}{"response": "config variable set"})
 
 }
@@ -971,7 +899,7 @@ func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 	provided := params["provided"]
 	fmt.Println(varname)
 	fmt.Println(provided)
-	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
@@ -982,7 +910,7 @@ func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
-        dbstore.AddConfigUnsetAudit(req, diagnostic.ID, varname)
+	dbstore.AddConfigUnsetAudit(req, diagnostic.ID, varname)
 	r.JSON(200, map[string]interface{}{"response": "config variable unset"})
 
 }
@@ -990,7 +918,7 @@ func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 func CreateHooks(params martini.Params, r render.Render) {
 	var diagnostic structs.DiagnosticSpec
 	provided := params["provided"]
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})

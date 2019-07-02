@@ -177,13 +177,24 @@ func AddDiagnosticUpdateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 func GetAudits(params martini.Params, r render.Render) {
 	provided := params["provided"]
 
-	stmt, err := db.Prepare("select auditid, id, audituser, audittype, coalesce(auditkey,null,''), coalesce(newvalue,null,''), created_at from audits where id = $1 or auditkey = $1 order by created_at asc")
+	diagnostic, err := FindDiagnostic(provided)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+	if diagnostic.ID == "" {
+		r.JSON(500, map[string]interface{}{"response": "invalid test"})
+		return
+	}
+
+	stmt, err := db.Prepare("select auditid, id, audituser, audittype, coalesce(auditkey,null,''), coalesce(newvalue,null,''), created_at from audits where id = $1 order by created_at asc")
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer stmt.Close()
 	var audits []structs.Audit
-	rows, err := stmt.Query(provided)
+	rows, err := stmt.Query(diagnostic.ID)
 	for rows.Next() {
 		var auditid string
 		var id string
