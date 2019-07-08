@@ -112,6 +112,7 @@ func AddDiagnosticCreateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	diagnosticaudit.Timeout = diagnostic.Timeout
 	diagnosticaudit.Startdelay = diagnostic.Startdelay
 	diagnosticaudit.Slackchannel = diagnostic.Slackchannel
+        diagnosticaudit.Command = diagnostic.Command
 	audituuid, _ := uuid.NewV4()
 	auditid := audituuid.String()
 	user, err := auth.GetUser(req)
@@ -148,6 +149,7 @@ func AddDiagnosticUpdateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	diagnosticaudit.Timeout = diagnostic.Timeout
 	diagnosticaudit.Startdelay = diagnostic.Startdelay
 	diagnosticaudit.Slackchannel = diagnostic.Slackchannel
+        diagnosticaudit.Command = diagnostic.Command
 	audituuid, _ := uuid.NewV4()
 	auditid := audituuid.String()
 	user, err := auth.GetUser(req)

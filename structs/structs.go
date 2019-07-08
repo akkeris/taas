@@ -149,6 +149,7 @@ type DiagnosticSpecAudit struct {
         Timeout        int                   `json:"timeout"`
         Startdelay     int                   `json:"startdelay"`
         Slackchannel   string                `json:"slackchannel"`
+        Command        string                `json:"command"`
 }
 
 type ESlogSpecIn struct {
