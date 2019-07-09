@@ -45,17 +45,17 @@ func GetPipeline(pipelinename string) (p structs.PipelineSpec, e error) {
 
 }
 
-func PromoteApp(promotion structs.PromotionSpec) (e error) {
+func PromoteApp(promotion structs.PromotionSpec) (s string, e error) {
 	p, err := json.Marshal(promotion)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return "failed", err
 	}
 	appcontrollerurl := os.Getenv("APP_CONTROLLER_URL") + "/pipeline-promotions"
 	req, err := http.NewRequest("POST", appcontrollerurl, bytes.NewBuffer(p))
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return "failed", err
 	}
 	req.Header.Add("Content-type", "application/json")
 	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
@@ -64,14 +64,21 @@ func PromoteApp(promotion structs.PromotionSpec) (e error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return "failed", err
 	}
 	defer resp.Body.Close()
 	bodybytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return "failed", err
 	}
 	fmt.Println(string(bodybytes))
-	return nil
+        var promotestatus structs.PromoteStatus
+        err = json.Unmarshal(bodybytes, &promotestatus)
+        if err != nil {
+                fmt.Println(err)
+                return  "failed",  err
+        }
+
+	return promotestatus.Status, nil
 }

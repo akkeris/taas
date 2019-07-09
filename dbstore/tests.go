@@ -3,6 +3,8 @@ package dbstore
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
+	akkeris "taas/jobs"
 	structs "taas/structs"
 
 	"encoding/json"
@@ -156,4 +158,81 @@ func storeBitsJunit(requestbody []byte, runid string) (e error) {
 		}
 	}
 	return nil
+}
+
+func isUUID(uuid string) bool {
+	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$")
+	return r.MatchString(uuid)
+}
+
+func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
+	var diagnostic structs.DiagnosticSpec
+	uri := os.Getenv("DIAGNOSTICDB")
+	db, dberr := sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println(dberr)
+		return diagnostic, dberr
+	}
+	defer db.Close()
+	var selectstring string
+	if !isUUID(provided) {
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where job||'-'||jobspace = $1"
+	} else {
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where id = $1"
+	}
+	stmt, err := db.Prepare(selectstring)
+	if err != nil {
+		fmt.Println(err)
+		return diagnostic, err
+	}
+	var did string
+	var dspace string
+	var dapp string
+	var daction string
+	var dresult string
+	var djob string
+	var djobspace string
+	var dimage string
+	var dpipelinename string
+	var dtransitionfrom string
+	var dtransitionto string
+	var dtimeout int
+	var dstartdelay int
+	var dslackchannel string
+	var dcommand string
+
+	defer stmt.Close()
+	rows, err := stmt.Query(provided)
+	for rows.Next() {
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
+		if err != nil {
+			fmt.Println(err)
+			return diagnostic, err
+		}
+		diagnostic.ID = did
+		diagnostic.Space = dspace
+		diagnostic.App = dapp
+		diagnostic.Action = daction
+		diagnostic.Result = dresult
+		diagnostic.Job = djob
+		diagnostic.JobSpace = djobspace
+		diagnostic.Image = dimage
+		diagnostic.PipelineName = dpipelinename
+		diagnostic.TransitionFrom = dtransitionfrom
+		diagnostic.TransitionTo = dtransitionto
+		diagnostic.Timeout = dtimeout
+		diagnostic.Startdelay = dstartdelay
+		diagnostic.Slackchannel = dslackchannel
+		diagnostic.Command = dcommand
+		//runiduuid, _ := uuid.NewV4()
+		//runid := runiduuid.String()
+		//fmt.Println(runid)
+		//diagnostic.RunID = runid
+		envvars, _ := akkeris.GetVars(djob, djobspace)
+		diagnostic.Env = envvars
+	}
+
+	db.Close()
+
+	return diagnostic, nil
 }

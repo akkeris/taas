@@ -11,11 +11,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	akkeris "taas/jobs"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
-        jobs "taas/jobs"
 	githubapi "taas/githubapi"
+	akkeris "taas/jobs"
+	jobs "taas/jobs"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
 	structs "taas/structs"
@@ -25,7 +25,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
@@ -38,39 +38,36 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	newvar.Varvalue = diagnostic.RunID
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
-      
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_RUNID"
-        newvar.Varvalue = diagnostic.RunID
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_ARTIFACT_REGION"
-        newvar.Varvalue = os.Getenv("AWS_REGION")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_RUNID"
+	newvar.Varvalue = diagnostic.RunID
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_AWS_ACCESS_KEY_ID"
-        newvar.Varvalue = os.Getenv("AWS_ACCESS_KEY_ID")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_ARTIFACT_REGION"
+	newvar.Varvalue = os.Getenv("AWS_REGION")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_AWS_SECRET_ACCESS_KEY"
-        newvar.Varvalue = os.Getenv("AWS_SECRET_ACCESS_KEY")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_AWS_ACCESS_KEY_ID"
+	newvar.Varvalue = os.Getenv("AWS_ACCESS_KEY_ID")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-        newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-        newvar.Varname = "TAAS_ARTIFACT_BUCKET"
-        newvar.Varvalue = os.Getenv("AWS_S3_BUCKET")
-        akkeris.AddVar(newvar)
-        akkeris.UpdateVar(newvar)
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_AWS_SECRET_ACCESS_KEY"
+	newvar.Varvalue = os.Getenv("AWS_SECRET_ACCESS_KEY")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
-
-
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "TAAS_ARTIFACT_BUCKET"
+	newvar.Varvalue = os.Getenv("AWS_S3_BUCKET")
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
 
 	go check(diagnostic)
 	return nil
@@ -81,44 +78,29 @@ func check(diagnostic structs.DiagnosticSpec) {
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
-	var jobrun structs.JobRunSpec
-   if strings.HasPrefix(diagnostic.Image,"akkeris://"){
-       imageappname := strings.Replace(diagnostic.Image,"akkeris://","",-1)
-       currentimage := akkeris.GetCurrentImage(imageappname)
-        jobrun.Image = currentimage
-        diagnostic.Image = currentimage
-   }else{
-       fmt.Println("assuming docker image url")
-        jobrun.Image = diagnostic.Image
-   }
+	var oneoff structs.OneOffSpec
+	oneoff.Space = diagnostic.JobSpace
+	oneoff.Podname = strings.ToLower(diagnostic.Job) + "-" + diagnostic.RunID
+	oneoff.Containername = strings.ToLower(diagnostic.Job)
+	if strings.HasPrefix(diagnostic.Image, "akkeris://") {
+		imageappname := strings.Replace(diagnostic.Image, "akkeris://", "", -1)
+		currentimage := akkeris.GetCurrentImage(imageappname)
+		oneoff.Image = currentimage
+		diagnostic.Image = currentimage
+	} else {
+		fmt.Println("assuming docker image url")
+		oneoff.Image = diagnostic.Image
+	}
+	oneoff.Command = diagnostic.Command
+	fetched, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
+	if err != nil {
+		fmt.Println(err)
+	}
+	oneoff.Env = fetched
 
-	jobrun.Image = diagnostic.Image
-	jobrun.DeleteBeforeCreate = true
-	jobrun.RestartPolicy = "Never"
-	jobrun.ActiveDeadlineSeconds = diagnostic.Timeout
-	p, err := json.Marshal(jobrun)
-	if err != nil {
-		fmt.Println(err)
-	}
-	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
-
-	akkeris.DeleteKubeJob(diagnostic.JobSpace, diagnostic.Job)
-
-	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/space/"+diagnostic.JobSpace+"/jobs/"+diagnostic.Job+"/run", bytes.NewBuffer(p))
-	if err != nil {
-		fmt.Println(err)
-	}
-	req.Header.Add("Content-type", "application/json")
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
+	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
+	time.Sleep(time.Second * 5)
+	akkeris.Startpod(oneoff)
 
 	time.Sleep(time.Second * 3)
 
@@ -127,11 +109,11 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var instance string
 	var overallstatus string
 	overallstatus = "timedout"
-        var i float64
-	for i = 0.0; i < float64(diagnostic.Timeout); i +=0.333  {
-                time.Sleep(time.Millisecond * 333)
+	var i float64
+	for i = 0.0; i < float64(diagnostic.Timeout); i += 0.333 {
+		time.Sleep(time.Millisecond * 333)
 		akkerisapiurl := os.Getenv("AKKERIS_API_URL")
-		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+diagnostic.Job+"/instance", nil)
+		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+oneoff.Podname+"/instance", nil)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -145,6 +127,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 		}
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(bodybytes))
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -197,26 +180,9 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
-                if status[0].Phase == "Running/running" && status[0].Appstatus[0].Readystatus==true {
-                        time2:=status[0].Appstatus[0].Startedat
-                        time1:=status[0].Starttime
-                        diff := time2.Sub(time1).Seconds()
-                        if diff > 10 {
-                          fmt.Printf("Diff: %v\n",diff)
-                          fmt.Println("JOB FAILED")
-                          overallstatus = "failed"
-                          endtime = time.Now().UTC()
-                          break
-                        }
-                }
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = akkeris.ScaleJob(diagnostic.JobSpace, diagnostic.Job, 0, 0)
-
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -230,7 +196,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	}
 	fmt.Println("done")
 	fmt.Println(overallstatus)
-	notifications.PostToSlack(diagnostic, overallstatus)
 	var result structs.ResultSpec
 	result.Payload.Lifecycle = "finished"
 	result.Payload.Outcome = overallstatus
@@ -257,6 +222,9 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	notifications.PostResults(result)
+	var promotestatus string
+	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
@@ -296,12 +264,14 @@ func check(diagnostic structs.DiagnosticSpec) {
 		promotion.Targets = targets
 		promotion.Pipeline.ID = pipelineid
 		promotion.Source.App.ID = fromappid
-		err = pipelines.PromoteApp(promotion)
-
+		promotestatus, err = pipelines.PromoteApp(promotion)
 		if err != nil {
 			fmt.Println(err)
 		}
+		fmt.Println(promotestatus)
 	}
+	notifications.PostToSlack(diagnostic, overallstatus, promotestatus)
+	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
 
@@ -340,7 +310,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,'') from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -359,11 +329,12 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 	var dtimeout int
 	var dstartdelay int
 	var dslackchannel string
+	var dcommand string
 
 	defer stmt.Close()
 	rows, err := stmt.Query(space, app, action, result)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -383,6 +354,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		diagnostic.Timeout = dtimeout
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
+		diagnostic.Command = dcommand
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -396,8 +368,8 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 
 }
 
-func DeleteDiagnostic(params martini.Params, r render.Render) {
-	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
+func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
@@ -415,7 +387,7 @@ func DeleteDiagnostic(params martini.Params, r render.Render) {
 		return
 
 	}
-
+	dbstore.AddDiagnosticDeleteAudit(req, diagnostic)
 	r.JSON(200, map[string]interface{}{"status": "deleted"})
 
 }
@@ -449,7 +421,7 @@ func deleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	return nil
 }
 
-func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
+func CreateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
 
 	if berr != nil {
 		fmt.Println(berr)
@@ -470,6 +442,9 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		defaultstartdelay, _ := strconv.Atoi(os.Getenv("DEFAULT_START_DELAY"))
 		diagnosticspec.Startdelay = defaultstartdelay
 	}
+	newappiduuid, _ := uuid.NewV4()
+	newappid := newappiduuid.String()
+	diagnosticspec.ID = newappid
 	err = createDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
@@ -477,19 +452,12 @@ func CreateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		return
 
 	}
-
+	dbstore.AddDiagnosticCreateAudit(req, diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "created"})
-
 }
 
 func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
-	err := akkeris.CreateJob(diagnosticspec)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	err = akkeris.CreateConfigSet(diagnosticspec)
+	err := akkeris.CreateConfigSet(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -509,16 +477,20 @@ func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
+	err = akkeris.CreateHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 
 	return nil
 }
 
-func UpdateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
+func UpdateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 	}
-	fmt.Println(diagnosticspec)
 	err := updateDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
@@ -526,7 +498,7 @@ func UpdateDiagnostic(diagnosticspec structs.DiagnosticSpec, berr binding.Errors
 		return
 
 	}
-
+	dbstore.AddDiagnosticUpdateAudit(req, diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "updated"})
 
 }
@@ -562,7 +534,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics order by app, space")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -582,11 +554,12 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 	var dtimeout int
 	var dstartdelay int
 	var dslackchannel string
+	var dcommand string
 
 	defer stmt.Close()
 	rows, err := stmt.Query()
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -606,6 +579,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		diagnostic.Timeout = dtimeout
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
+		diagnostic.Command = dcommand
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -679,7 +653,7 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 	var diagnostic structs.DiagnosticSpec
 
 	provided := params["provided"]
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
@@ -688,102 +662,31 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
-        envvars:=diagnostic.Env
-        var newenvvars []structs.EnvironmentVariable
-        protectedspace, err := akkeris.IsProtectedSpace(diagnostic.Space)
-        if err != nil {
-                fmt.Println(err)
-                r.JSON(500, map[string]interface{}{"response": err.Error()})
-                return
-        }
-        for _, element := range envvars {
-           if (strings.HasPrefix(element.Name,"TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
-               continue
-           }
-            
- 
-           if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))){
-              var newvar structs.EnvironmentVariable
-              newvar.Name=element.Name
-              newvar.Value="[redacted]"
-              newenvvars=append(newenvvars, newvar)
-           }else{
-              newenvvars=append(newenvvars, element)
-           }
-        }
-       
-        diagnostic.Env=newenvvars
-	r.JSON(200, diagnostic)
-
-}
-
-func getDiagnosticByNameOrID(provided string) (d structs.DiagnosticSpec, e error) {
-	var diagnostic structs.DiagnosticSpec
-	uri := os.Getenv("DIAGNOSTICDB")
-	db, dberr := sql.Open("postgres", uri)
-	if dberr != nil {
-		fmt.Println(dberr)
-		return diagnostic, dberr
-	}
-	defer db.Close()
-	var selectstring string
-	if !isUUID(provided) {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics where job||'-'||jobspace = $1"
-	} else {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel from diagnostics where id = $1"
-	}
-	stmt, err := db.Prepare(selectstring)
+	envvars := diagnostic.Env
+	var newenvvars []structs.EnvironmentVariable
+	protectedspace, err := akkeris.IsProtectedSpace(diagnostic.Space)
 	if err != nil {
 		fmt.Println(err)
-		return diagnostic, err
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
 	}
-	var did string
-	var dspace string
-	var dapp string
-	var daction string
-	var dresult string
-	var djob string
-	var djobspace string
-	var dimage string
-	var dpipelinename string
-	var dtransitionfrom string
-	var dtransitionto string
-	var dtimeout int
-	var dstartdelay int
-	var dslackchannel string
-	defer stmt.Close()
-	rows, err := stmt.Query(provided)
-	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel)
-		if err != nil {
-			fmt.Println(err)
-			return diagnostic, err
+	for _, element := range envvars {
+		if (strings.HasPrefix(element.Name, "TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
+			continue
 		}
-		diagnostic.ID = did
-		diagnostic.Space = dspace
-		diagnostic.App = dapp
-		diagnostic.Action = daction
-		diagnostic.Result = dresult
-		diagnostic.Job = djob
-		diagnostic.JobSpace = djobspace
-		diagnostic.Image = dimage
-		diagnostic.PipelineName = dpipelinename
-		diagnostic.TransitionFrom = dtransitionfrom
-		diagnostic.TransitionTo = dtransitionto
-		diagnostic.Timeout = dtimeout
-		diagnostic.Startdelay = dstartdelay
-		diagnostic.Slackchannel = dslackchannel
-		//runiduuid, _ := uuid.NewV4()
-		//runid := runiduuid.String()
-		//fmt.Println(runid)
-		//diagnostic.RunID = runid
-		envvars, _ := akkeris.GetVars(djob, djobspace)
-		diagnostic.Env = envvars
+
+		if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))) {
+			var newvar structs.EnvironmentVariable
+			newvar.Name = element.Name
+			newvar.Value = "[redacted]"
+			newenvvars = append(newenvvars, newvar)
+		} else {
+			newenvvars = append(newenvvars, element)
+		}
 	}
 
-	db.Close()
-
-	return diagnostic, nil
+	diagnostic.Env = newenvvars
+	r.JSON(200, diagnostic)
 
 }
 
@@ -796,7 +699,7 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 	}
 	fmt.Println(provided)
 	fmt.Println(spec)
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 
 	if err != nil {
 		fmt.Println(err)
@@ -855,7 +758,7 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 	}
 	fmt.Println(provided)
 	fmt.Println(spec)
-	diagnostic, err := getDiagnosticByNameOrID(provided)
+	diagnostic, err := dbstore.FindDiagnostic(provided)
 
 	if err != nil {
 		fmt.Println(err)
@@ -898,6 +801,7 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 	r.JSON(200, map[string]interface{}{"response": "secret removed"})
 
 }
+
 func isUUID(uuid string) bool {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$")
 	return r.MatchString(uuid)
@@ -941,13 +845,13 @@ func IsValidTest(test string) (v bool, e error) {
 	return isvalid, nil
 }
 
-func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Errors, r render.Render) {
+func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec, berr binding.Errors, r render.Render) {
 
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 	}
-	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
@@ -974,7 +878,7 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 		if err != nil {
 			fmt.Println(err)
 			r.JSON(200, map[string]interface{}{"response": err.Error()})
-                        return
+			return
 		}
 	} else {
 		fmt.Println("Adding")
@@ -982,19 +886,20 @@ func SetConfig(params martini.Params, varspec structs.Varspec, berr binding.Erro
 		if err != nil {
 			fmt.Println(err)
 			r.JSON(200, map[string]interface{}{"response": err.Error()})
-                        return
+			return
 		}
 	}
+	dbstore.AddConfigSetAudit(req, diagnostic.ID, varspec)
 	r.JSON(200, map[string]interface{}{"response": "config variable set"})
 
 }
 
-func UnsetConfig(params martini.Params, r render.Render) {
+func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 	varname := params["varname"]
 	provided := params["provided"]
 	fmt.Println(varname)
 	fmt.Println(provided)
-	diagnostic, err := getDiagnosticByNameOrID(params["provided"])
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
@@ -1005,6 +910,30 @@ func UnsetConfig(params martini.Params, r render.Render) {
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
+	dbstore.AddConfigUnsetAudit(req, diagnostic.ID, varname)
 	r.JSON(200, map[string]interface{}{"response": "config variable unset"})
 
+}
+
+func CreateHooks(params martini.Params, r render.Render) {
+	var diagnostic structs.DiagnosticSpec
+	provided := params["provided"]
+	diagnostic, err := dbstore.FindDiagnostic(provided)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err})
+	}
+	if diagnostic.ID == "" {
+		r.JSON(500, map[string]interface{}{"response": "invalid test"})
+		return
+	}
+
+	err = jobs.CreateHooks(diagnostic.App + "-" + diagnostic.Space)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+
+	r.JSON(200, map[string]interface{}{"status": "hooks added"})
 }

@@ -32,7 +32,7 @@ type Slack struct {
 	Attachments []Attachment `json:"attachments"`
 }
 
-func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
+func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus string) {
 	var slack Slack
 	testframework := strings.ToUpper(strings.Split(strings.Replace(diagnostic.Image, "quay.octanner.io/developer/", "", -1), ":")[0])
 
@@ -102,7 +102,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
 		fmt.Println(string(bodybytes))
-		PostPromoteToSlack(diagnostic, status)
+		PostPromoteToSlack(diagnostic, status, promotestatus)
 	}
         if os.Getenv("ENABLE_DEBUG_SLACK_NOTIFICATIONS") == "true" {
                 debugslackurl := os.Getenv("DEBUG_SLACK_NOTIFICATION_URL")
@@ -122,7 +122,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string) {
         }
 }
 
-func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string) {
+func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus string) {
 	var slack Slack
 	//testframework:=strings.ToUpper(strings.Split(strings.Replace(diagnostic.Image,"quay.octanner.io/developer/","",-1),":")[0])
 	if diagnostic.Slackchannel != "" {
@@ -134,11 +134,14 @@ func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string) {
 
 	slackurl := os.Getenv("SLACK_NOTIFICATION_URL")
 	slack.Username = "Promotion Action"
-
-	if status == "success" && diagnostic.PipelineName != "manual" {
-		slack.Text = "Promotion from " + diagnostic.TransitionFrom + " to " + diagnostic.TransitionTo + " triggered"
+	if status == "success" && diagnostic.PipelineName != "manual" && promotestatus=="successful"  {
+		slack.Text = "Promotion from " + diagnostic.TransitionFrom + " to " + diagnostic.TransitionTo + " triggered with result "+promotestatus
 		slack.IconEmoji = ":mortar_board:"
 	}
+        if status == "success" && diagnostic.PipelineName != "manual" && promotestatus != "successful"  {
+                slack.Text = "Promotion from " + diagnostic.TransitionFrom + " to " + diagnostic.TransitionTo + " triggered with result "+promotestatus
+                slack.IconEmoji = ":kaboom:"
+        }
 	if status == "success" && diagnostic.PipelineName == "manual" {
 		slack.Text = "No promotion triggered - set to manual"
 		slack.IconEmoji = ":keyboard:"

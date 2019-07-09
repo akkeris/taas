@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-        "errors"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,11 +12,13 @@ import (
 	"strings"
 	structs "taas/structs"
 
+	vault "github.com/akkeris/vault-client"
 	_ "github.com/lib/pq"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
+        
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -24,17 +26,15 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	defer db.Close()
 	fmt.Println(diagnosticspec.Slackchannel)
-	stmt, err := db.Prepare("UPDATE diagnostics set job=$1, jobspace=$2,image=$3,pipelinename=$4,transitionfrom=$5,transitionto=$6,timeout=$7,startdelay=$8,slackchannel=$9 where app=$10 and space=$11 and action=$12 and result=$13")
+	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8 where job=$9 and jobspace=$10")
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 	res, err := stmt.Exec(
-		diagnosticspec.Job, diagnosticspec.JobSpace, diagnosticspec.Image,
-		diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
+		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel, diagnosticspec.App, diagnosticspec.Space,
-		diagnosticspec.Action, diagnosticspec.Result,
+		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.Job,diagnosticspec.JobSpace,
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -52,8 +52,6 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
-	newappiduuid, _ := uuid.NewV4()
-	newappid := newappiduuid.String()
 
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
@@ -65,12 +63,12 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var id string
 	inserterr := db.QueryRow(
-		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id;",
-		newappid, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
+		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning id;",
+		diagnosticspec.ID, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
 		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel,
+		diagnosticspec.Slackchannel, diagnosticspec.Command,
 	).Scan(&id)
 	if inserterr != nil {
 		return inserterr
@@ -240,9 +238,9 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 }
 
 func UpdateVar(vartoadd structs.Varspec) error {
-        if vartoadd.Varvalue == "[redacted]" {
-           return errors.New("unable to set value of "+vartoadd.Varname+" to "+vartoadd.Varvalue)
-        }
+	if vartoadd.Varvalue == "[redacted]" {
+		return errors.New("unable to set value of " + vartoadd.Varname + " to " + vartoadd.Varvalue)
+	}
 	p, err := json.Marshal(vartoadd)
 	if err != nil {
 		fmt.Println(err)
@@ -274,9 +272,9 @@ func UpdateVar(vartoadd structs.Varspec) error {
 }
 
 func AddVar(vartoadd structs.Varspec) error {
-        if vartoadd.Varvalue == "[redacted]" {
-           return errors.New("unable to set value of "+vartoadd.Varname+" to "+vartoadd.Varvalue)
-        }
+	if vartoadd.Varvalue == "[redacted]" {
+		return errors.New("unable to set value of " + vartoadd.Varname + " to " + vartoadd.Varvalue)
+	}
 	var vars []structs.Varspec
 	vars = append(vars, vartoadd)
 
@@ -335,51 +333,6 @@ func DeleteVar(diagnosticspec structs.DiagnosticSpec, varname string) error {
 	fmt.Println(string(bodybytes))
 
 	return nil
-}
-
-func CreateJob(diagnosticspec structs.DiagnosticSpec) (e error) {
-
-	type JobReq struct {
-		Name     string `json:"name"`  // required
-		Space    string `json:"space"` // required
-		CMD      string `json:"cmd,omitempty"`
-		Schedule string `json:"schedule,omitempty"`
-		Plan     string `json:"plan"`
-	}
-
-	var jobreq JobReq
-	jobreq.Name = diagnosticspec.Job
-	jobreq.Space = diagnosticspec.JobSpace
-	jobreq.Plan = "standard-s"
-
-	p, err := json.Marshal(jobreq)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
-	req, err := http.NewRequest("POST", akkerisapiurl+"/v1beta1/jobs", bytes.NewBuffer(p))
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	req.Header.Add("Content-type", "application/json")
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	defer resp.Body.Close()
-	bodybytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	fmt.Println(string(bodybytes))
-	return nil
-
 }
 
 func DeleteService(diagnostic structs.DiagnosticSpec) (e error) {
@@ -495,32 +448,111 @@ func DeleteJob(diagnostic structs.DiagnosticSpec) (e error) {
 
 }
 
-
-func toAppSpace(full string)(s string, a string){
-      parts := strings.Split(full,"-")
-      app := parts[0]
-      rest := parts[1:]
-      return app, strings.Join(rest,"-")
+func toAppSpace(full string) (s string, a string) {
+	parts := strings.Split(full, "-")
+	app := parts[0]
+	rest := parts[1:]
+	return app, strings.Join(rest, "-")
 }
 
-func GetCurrentImage(app string)(i string){
-       app, space  := toAppSpace(app)
-       req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
-        if err != nil {
-                fmt.Println(err)
-        }
-        client := http.Client{}
-        resp, err := client.Do(req)
-        if err != nil {
-                fmt.Println(err)
-        }
-        defer resp.Body.Close()
-        bodybytes, err := ioutil.ReadAll(resp.Body)
-        var appinfo structs.AppInfo
-        err = json.Unmarshal(bodybytes, &appinfo)
-        if err != nil {
-                fmt.Println(err)
-        }
-        return appinfo.Image
+func GetCurrentImage(app string) (i string) {
+	app, space := toAppSpace(app)
+	req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/space/"+space+"/app/"+app, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	var appinfo structs.AppInfo
+	err = json.Unmarshal(bodybytes, &appinfo)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return appinfo.Image
 }
 
+// CreateHooks - Check presence of build/release hooks on an app and add them if needed
+func CreateHooks(appspace string) (e error) {
+	svcurl := os.Getenv("TAAS_SVC_URL")
+	var failedHooks []string
+
+	hooks, err := GetHooks(appspace)
+	if err != nil {
+		return err
+	}
+
+	needsBuild := true
+	needsRelease := true
+	for _, hook := range hooks {
+		if needsBuild {
+			needsBuild = !strings.Contains(hook.URL, svcurl+"/v1/buildhook")
+		}
+		if needsRelease {
+			needsRelease = !strings.Contains(hook.URL, svcurl+"/v1/releasehook")
+		}
+	}
+
+	if needsBuild {
+		err := createHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
+		if err != nil {
+			fmt.Println("Error creating build hook")
+			fmt.Println(err)
+			failedHooks = append(failedHooks, "build")
+		}
+	}
+
+	if needsRelease {
+		err := createHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
+		if err != nil {
+			fmt.Println("Error creating release hook")
+			fmt.Println(err)
+			failedHooks = append(failedHooks, "release")
+		}
+	}
+
+	if len(failedHooks) != 0 {
+		return errors.New("One or more hooks failed to create: " + strings.Join(failedHooks, ","))
+	}
+
+	fmt.Println("All hooks present!")
+	return nil
+}
+
+func createHook(active bool, events []string, url string, secret string, app string) (e error) {
+	var controllerurl = os.Getenv("APP_CONTROLLER_URL")
+
+	var hook structs.AppHook
+	hook.Active = active
+	hook.Events = events
+	hook.URL = url
+	hook.Secret = secret
+
+	h, err := json.Marshal(hook)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", controllerurl+"/apps/"+app+"/hooks", bytes.NewBuffer(h))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(bodybytes))
+	return nil
+}

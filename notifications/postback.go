@@ -11,8 +11,9 @@ import (
 )
 
 func PostResults(result structs.ResultSpec) (e error) {
-
+if os.Getenv("POSTBACKURL") !="none" && os.Getenv("POSTBACKURL") !="" {
 	postbackurl := os.Getenv("POSTBACKURL")
+        fmt.Println("Posting to "+postbackurl)
 	p, err := json.Marshal(result)
 	if err != nil {
 		fmt.Println(err)
@@ -36,6 +37,8 @@ func PostResults(result structs.ResultSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(bodybytes)
+	fmt.Println("Response body from postback: "+string(bodybytes))
+        fmt.Println("Response code from postback: "+resp.Status)
+}
 	return nil
 }
