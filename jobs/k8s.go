@@ -267,3 +267,40 @@ func GetTestLogs(jobspace string, job string, instance string) (l []string, e er
 	lines = strings.Split(string(bodybytes), "\n")
 	return lines, nil
 }
+
+func DescribePod(space string, name string) (o structs.PodDescribe, e error){
+        var pod structs.PodDescribe
+        kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
+        kubernetesapiversion := "/api/v1/"
+        uri := "https://" + kubernetesapiserver + kubernetesapiversion + "namespaces/" + space + "/pods/" + name
+
+        resp, jerr := kubernetesAPICall("GET", uri)
+        if jerr != nil {
+                return pod, jerr
+        }
+        if resp.Status != http.StatusOK {
+                return pod,errors.New(string(resp.Body))
+        }
+        err := json.Unmarshal(resp.Body, &pod)
+        if err != nil {
+                return pod, err
+        }
+
+        uri = "https://" + kubernetesapiserver + kubernetesapiversion + "namespaces/" + space + "/events?fieldSelector=involvedObject.name="+name+",involvedObject.namespace="+space
+
+        resp, jerr = kubernetesAPICall("GET", uri)
+        if jerr != nil {
+                return pod, jerr
+        }
+        if resp.Status != http.StatusOK {
+                return pod,errors.New(string(resp.Body))
+        }
+        var events structs.EventList
+        err = json.Unmarshal(resp.Body, &events)
+        if err != nil {
+                return pod, err
+        }
+        pod.Events=events
+
+        return pod, nil
+}

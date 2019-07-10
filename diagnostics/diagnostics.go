@@ -2,6 +2,8 @@ package diagnostics
 
 import (
 	"bytes"
+        "bufio"
+        "text/template"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -18,6 +20,7 @@ import (
 	jobs "taas/jobs"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
+        artifacts "taas/artifacts"
 	structs "taas/structs"
 	"time"
 
@@ -190,6 +193,10 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var loglines structs.LogLines
 	loglines.Logs = logs
 	diagnosticlogs.WriteLogES(diagnostic, loglines)
+        _, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
+        if err != nil {
+                fmt.Println(err)
+        }
 	err = dbstore.StoreRun(diagnostic)
 	if err != nil {
 		fmt.Println(err)
@@ -937,3 +944,59 @@ func CreateHooks(params martini.Params, r render.Render) {
 
 	r.JSON(200, map[string]interface{}{"status": "hooks added"})
 }
+
+func describePodAndUploadToS3(space string, name string, runid string) (p structs.TemplatePod, e error){
+     var templatepod structs.TemplatePod
+     object, err := akkeris.DescribePod(space, name)
+     if err != nil {
+                fmt.Println(err)
+                return templatepod, err
+     }
+     templatepod.Name=object.Metadata.Name
+     templatepod.Space=object.Metadata.Namespace
+     templatepod.Node = object.Spec.NodeName
+     templatepod.StartTime = object.Status.StartTime
+     templatepod.Status = object.Status.Phase
+     templatepod.Containers = object.Spec.Containers
+     templatepod.Conditions = object.Status.Conditions
+     templatepod.Events = object.Events.Items
+
+describetemplate:=`
+Name:               {{ .Name }}
+Namespace:          {{ .Space }}
+Node:               {{ .Node }}
+Start Time:         {{ .StartTime }}
+Status:             {{ .Status }}
+
+Containers:
+-----------{{range .Containers}}
+  {{ .Name }}:
+    Image:          {{ .Image }}
+{{end}}
+Conditions:
+-----------{{range .Conditions}}
+  Type: {{ .Type }}
+  Status: {{ .Status }}
+  Reason: {{ .Reason }}
+  Message: {{ .Message }}
+{{end}}
+
+Events:
+-------{{range .Events}}
+  Type: {{ .Type }}
+  Reason: {{ .Reason }}
+  Message: {{ .Message }}
+{{end}}
+`
+var t *template.Template
+t = template.Must(template.New("desribe").Parse(describetemplate))
+var b bytes.Buffer
+wr := bufio.NewWriter(&b)
+err = t.Execute(wr, templatepod)
+fmt.Println(err)
+wr.Flush()
+
+artifacts.UploadToS3(string(b.Bytes()), runid)
+return templatepod, nil
+}
+

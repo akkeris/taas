@@ -671,3 +671,59 @@ type Audit struct {
         Newvalue string `json:"newvalue"`
         Createdat time.Time `json:"created_at"`
 }
+
+type PodDescribe struct {
+    Metadata   struct {
+        Name              string    `json:"name"`
+        Namespace         string    `json:"namespace"`
+    }
+    Spec struct {
+        Containers []struct {
+            Name  string `json:"name"`
+            Image string `json:"image"`
+        } `json:"containers"`
+        NodeName                      string `json:"nodeName"`
+    } `json:"spec"`
+    Status struct {
+        Phase      string `json:"phase"`
+        Conditions []struct {
+            Type               string      `json:"type"`
+            Status             string      `json:"status"`
+            Reason             string      `json:"reason,omitempty"`
+            Message            string      `json:"message,omitempty"`
+        } `json:"conditions"`
+        StartTime         time.Time `json:"startTime"`
+    } `json:"status"`
+    Events EventList `json:"events"`
+}
+
+type EventList struct {
+    Items []struct {
+        Reason  string `json:"reason"`
+        Message string `json:"message"`
+        Type    string      `json:"type"`
+    } `json:"items"`
+}
+
+type TemplatePod struct {
+   Name string
+   Space string
+   Node string
+   StartTime time.Time
+   Status string
+   Containers []struct {
+            Name  string `json:"name"`
+            Image string `json:"image"`
+   }
+   Conditions []struct {
+            Type               string      `json:"type"`
+            Status             string      `json:"status"`
+            Reason             string      `json:"reason,omitempty"`
+            Message            string      `json:"message,omitempty"`
+   }
+   Events []struct {
+            Reason             string `json:"reason"`
+            Message            string `json:"message"`
+            Type               string `json:"type"`
+    }
+}

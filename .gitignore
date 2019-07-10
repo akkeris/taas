@@ -6,3 +6,7 @@ ldapapi-jam-stg
 version
 maru.sh
 *.env
+bs1.sh
+ds1.sh
+hd
+ui
