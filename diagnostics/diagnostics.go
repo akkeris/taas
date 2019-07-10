@@ -996,7 +996,7 @@ err = t.Execute(wr, templatepod)
 fmt.Println(err)
 wr.Flush()
 
-artifacts.UploadToS3(string(b.Bytes()), runid)
+artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)
 return templatepod, nil
 }
 

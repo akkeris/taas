@@ -10,7 +10,7 @@ import (
 )
 
 
-func UploadToS3(body string, runid string) {
+func UploadToS3(body string, contenttype string, runid string) {
 stringBytes := bytes.NewReader([]byte(body))
 
         svc := s3.New(session.New(&aws.Config{
@@ -21,7 +21,7 @@ input := &s3.PutObjectInput{
     Body:   aws.ReadSeekCloser(stringBytes),
     Bucket: aws.String(os.Getenv("AWS_S3_BUCKET")),
     Key:    aws.String(runid+"/describe.txt"),
-    ContentType: aws.String("text/plain"),
+    ContentType: aws.String(contenttype),
 }
 
 result, err := svc.PutObject(input)
