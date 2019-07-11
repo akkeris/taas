@@ -1,6 +1,21 @@
-# Overview
-
-Akkeris Testing as a Service (TaaS) provides a platform for developers to host and run test suites for Akkeris applications (or anything else!).
+## Table of Contents
+- [Table of Contents](#Table-of-Contents)
+- [Diagnostics](#Diagnostics)
+  - [Create Diagnostic](#Create-Diagnostic)
+  - [List Diagnostics](#List-Diagnostics)
+  - [Get Diagnostic Info](#Get-Diagnostic-Info)
+  - [Update Diagnostic Configuration](#Update-Diagnostic-Configuration)
+  - [Delete Diagnostic](#Delete-Diagnostic)
+  - [Set Configuration Variables](#Set-Configuration-Variables)
+  - [Unset Configuration Variables](#Unset-Configuration-Variables)
+  - [Create Hooks](#Create-Hooks)
+  - [View Audits](#View-Audits)
+  - [List Runs](#List-Runs)
+  - [Get Run Info](#Get-Run-Info)
+  - [Get Run Logs](#Get-Run-Logs)
+  - [Get Array of Run Logs](#Get-Array-of-Run-Logs)
+  - [Rerun Runs](#Rerun-Runs)
+  - [Artifacts](#Artifacts)
 
 ## Diagnostics
 
