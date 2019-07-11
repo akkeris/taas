@@ -2,6 +2,21 @@
 
 Akkeris TaaS gives developers a place to host and run automated testing frameworks. TaaS is a big step towards making Akkeris a fully featured CI/CD offering - with TaaS, you can commit code, run automated tests, and promote your app along a development pipeline in a single step. You can run almost any test framework of your choice, as long as it can run as a Docker image and exits with a zero (pass) or nonzero (fail).
 
+## Table of Contents
+- [Akkeris Testing As A Service](#Akkeris-Testing-As-A-Service)
+  - [Table of Contents](#Table-of-Contents)
+  - [API](#API)
+  - [Why Use TaaS?](#Why-Use-TaaS)
+    - [Simplify the typical deployment process!](#Simplify-the-typical-deployment-process)
+      - [Example](#Example)
+    - [Get detailed information on your tests!](#Get-detailed-information-on-your-tests)
+  - [Tips](#Tips)
+  - [**Configure Akkeris TaaS**](#Configure-Akkeris-TaaS)
+
+## API
+
+[API Reference](./docs/API-Reference.md)
+
 ## Why Use TaaS?
 
 ### Simplify the typical deployment process!
@@ -44,10 +59,6 @@ TaaS test configuration:
 TaaS provides developers with all logs output by their testing framework during the test run. It also provides an S3 bucket that developers can use to upload images or error log files for maximum transparency into the test run. For example, a UI test framework can take a screenshot of an error message that interfered with an automated test. Additionally, detailed information on the status of the Kubernetes pod during the test run is uploaded to the S3 bucket for debugging purposes.
 
 These resources are all collected and sent to the Slack channel of your choosing once the test is complete.
-
-## API
-
-[API Reference](./docs/API-Reference.md)
 
 ## Tips
 
