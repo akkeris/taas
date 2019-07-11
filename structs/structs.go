@@ -699,6 +699,7 @@ type PodDescribe struct {
 
 type EventList struct {
     Items []struct {
+	LastTimestamp      time.Time   `json:"lastTimestamp"`
         Reason  string `json:"reason"`
         Message string `json:"message"`
         Type    string      `json:"type"`
@@ -722,6 +723,7 @@ type TemplatePod struct {
             Message            string      `json:"message,omitempty"`
    }
    Events []struct {
+            LastTimestamp      time.Time   `json:"lastTimestamp"`
             Reason             string `json:"reason"`
             Message            string `json:"message"`
             Type               string `json:"type"`

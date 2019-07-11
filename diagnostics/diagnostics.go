@@ -983,6 +983,7 @@ Conditions:
 
 Events:
 -------{{range .Events}}
+  Time: {{ .LastTimestamp }}
   Type: {{ .Type }}
   Reason: {{ .Reason }}
   Message: {{ .Message }}
