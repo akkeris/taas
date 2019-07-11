@@ -1,27 +1,27 @@
 # Overview
 
-Akkeris Testing as a Service (TaaS) provides a platform for developers to test their code before and after deployment to production.
+Akkeris Testing as a Service (TaaS) provides a platform for developers to host and run test suites for Akkeris applications (or anything else!).
 
 ## Diagnostics
 
-A diagnostic is a test that can be run against Akkeris apps. There are only two requirements for a test framework to run as an Akkeris diagnostic - the framework must run in Docker, and it must exit with a zero (pass) or nonzero (fail).
+A diagnostic is a test that can be run against Akkeris apps. There are only two requirements for a test framework to run as an Akkeris diagnostic - the framework must run in Docker, and it must exit with a zero (pass) or nonzero (fail). Logs and artifacts will be collected and provided to a Slack channel after the run is completed.
 
 ### Create Diagnostic
 
 `POST /v1/diagnostic`
 
-Creates a diagnostic. The diagnostic will be created in the given space and with the given name, and act upon the given app. Note that the name, space, and org cannot be changed later. Use the prefix `akkeris://` to use the current image of an Akkeris app.
+Creates a diagnostic. The diagnostic will be created in the given space and with the given name, and act upon the given app. Note that the job, jobspace, app, space, org, action, and result cannot be changed later. Use the prefix `akkeris://` to use the current image of an Akkeris app.
 
 | Name           | Type             | Description                                                                   | Example                                            |
 |----------------|------------------|-------------------------------------------------------------------------------|----------------------------------------------------|
 | job            | required string  | The name of the diagnostic                                                    | ui-tests                                           |
-| jobspace       | required string  | The name of the space where the diagnostic should live                        | ui-tests                                           |
-| app            | required string  | The name of the app that the diagnostic will target                           | ui-tests                                           |
-| space          | required string  | The name of the space where the targeted app lives                            | taas                                               |
-| action         | required string  | The app lifecycle action that the diagnostic will listen for                  | released                                           |
+| jobspace       | required string  | The name of the space where the diagnostic should live                        | taas                                               |
+| app            | required string  | The name of the app that the diagnostic will target                           | appkitui                                           |
+| space          | required string  | The name of the space where the targeted app lives                            | default                                            |
+| action         | required string  | The app lifecycle action that the diagnostic will listen for                  | release                                            |
 | result         | required string  | The result of the action that will trigger the diagnostic                     | succeeded                                          |
-| image          | required string  | The Docker image to run                                                       | akkeris://appkitui-default, crccheck/hello-world   |
-| pipelinename   | required string  | The pipeline to promote the app in (set to manual for manual promotion)       | ui-pipeline                                        |
+| image          | required string  | The Docker image to run                                                       | akkeris://appkitui-default                         |
+| pipelinename   | required string  | The pipeline to promote the app in (set to manual for manual promotion)       | uipipeline                                         |
 | transitionfrom | required string  | The pipeline stage to transition from (set to manual for manual promotion)    | dev                                                |
 | transitionto   | required string  | The pipeline stage to transition to (set to manual for manual promotion)      | qa                                                 |
 | timeout        | required integer | The amount of time in seconds before the diagnostic is marked as failed       | 180                                                |
@@ -29,7 +29,7 @@ Creates a diagnostic. The diagnostic will be created in the given space and with
 | slackchannel   | required string  | The Slack channel to notify with test results                                 | taas_tests                                         |
 | command   	   | optional string  | Override the Docker image command                                             | ./start.sh   		                                   |
 | org          	 | optional string  | The name of the org for attribution (currently unused)                        | taas                                               |
-| env            | optional array   | An array of name/value objects to add as environment variables                | [ { "name": "RUN_TESTS", "value": "true" } ]       |
+| env            | optional array   | An array of name/value objects to add as environment variables                | [ { "name": "FOO", "value": "BAR" } ]              |
 
 **CURL Example**
 
@@ -42,7 +42,7 @@ curl \
     "jobspace": "taas",
     "app": "appkitui",
     "appspace": "default",
-    "action": "released",
+    "action": "release",
     "result": "succeeded",
     "image": "akkeris://appkitui-default",
     "pipelinename": "uipipeline",
@@ -53,7 +53,12 @@ curl \
     "slackchannel": "taas_runs",
     "command": "./start.sh",
     "org": "akkeris",
-    "env": [ { "name": "FOO", "value": "BAR" } ]
+    "env": [
+      {
+        "name": "FOO",
+        "value": "BAR"
+      }
+    ]
   }'
 ```
 
@@ -69,11 +74,13 @@ curl \
 
 `GET /v1/diagnostics`
 
-Retrieves a list of all of the currently configured diagnostics. Optionally, a "simple" query parameter can be supplied to produce simplified output:
+Retrieves a list of all of the currently configured diagnostics. 
+
+An optional query parameter can be supplied to produce simplified output:
 
 | Parameter Name     | Description                               | Example                   |
 |--------------------|-------------------------------------------|---------------------------|
-| simple             | Simplify the output for each diagnostic   | simple=true              |
+| simple             | Simplify the output for each diagnostic   | simple=true               |
 
 **CURL Example**
 
@@ -126,7 +133,7 @@ Get info about a specific diagnostic
 ```bash
 curl \
   -X GET \
-  "http://localhost:4000/v1/diagnostics/ui-tests-taas"
+  "http://localhost:4000/v1/diagnostic/ui-tests-taas"
 ```
 
 **200 "OK" Response**
@@ -169,7 +176,7 @@ Update one or more properties of a specific diagnostic. Properties not included 
 |--------------------|------------------|-------------------------------------------------------------------------------|----------------------------------------------------|
 | job                | required string  | The name of the job to update                                                 | ui-tests                                           |
 | jobspace           | required string  | The name of the jobspace of the job to update                                 | taas                                               |
-| image              | optional string  | The Docker image to run                                                       | akkeris://appkitui-default, crccheck/hello-world   |
+| image              | optional string  | The Docker image to run                                                       | akkeris://appkitui-default                         |
 | pipelinename       | optional string  | The pipeline to promote the app in (set to manual for manual promotion)       | ui-pipeline                                        |
 | transitionfrom     | optional string  | The pipeline stage to transition from (set to manual for manual promotion)    | dev                                                |
 | transitionto       | optional string  | The pipeline stage to transition to (set to manual for manual promotion)      | qa                                                 |
@@ -276,7 +283,7 @@ curl \
 
 `POST /v1/diagnostic/{diagnostic}/hooks`
 
-Create TaaS build and release hooks on a targeted app for a specific diagnostic.
+Create TaaS build and release hooks on a diagnostic's target app. These are normally added during the diagnostic registration process.
 
 **CURL Example**
 
@@ -298,7 +305,7 @@ curl \
 
 `GET /v1/diagnostic/{diagnostic}/audits`
 
-Get the audit log for a diagnostic.
+Get the audit log for a diagnostic, which includes various records of changes made to the diagnostic since it was created.
 
 **CURL Example**
 
@@ -444,7 +451,7 @@ curl \
 [2019-07-11 11:33:43 AM]
 ```
 
-### Get Run Logs
+### Get Array of Run Logs
 
 `GET /v1/diagnostic/logs/{runid}/array`
 
@@ -523,7 +530,7 @@ curl \
 
 `GET /v1/artifacts/{runid}/{directory}`
 
-View artifacts uploaded to S3 as part of a test run. Result of this API call is HTML formatted and best viewed in a browser. All test runs will have `describe.txt` placed in the root directory - this file contains Kubernetes pod information gathered at runtime.
+View artifacts uploaded to S3 as part of a test run. Result of this API call is HTML formatted and best viewed in a browser. All test runs will have `describe.txt` placed in the root directory - this file contains Kubernetes pod information gathered during the test run.
 
 **CURL Example**
 
