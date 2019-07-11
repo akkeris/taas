@@ -12,13 +12,13 @@ With TaaS, all a developer needs to do is the first step - push code to the GitH
 
 #### Example
 
-**ferengi-pipeline**
+ferengi-pipeline configuration:
 
 | Development   | Staging       | Production     |
 |---------------|---------------|----------------|
 | ferengi-dev   | ferengi-stg   | ferengi-prd    |
 
-**TaaS tests**
+TaaS test configuration:
 
 | Diagnostic          | Target App     | Pipeline                      |
 |---------------------|----------------|-------------------------------|
