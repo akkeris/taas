@@ -8,13 +8,17 @@ import (
 	"github.com/robfig/cron"
 	"net/http"
 	dbstore "taas/dbstore"
-	hooks "taas/hooks"
+	diagnostics "taas/diagnostics"
 	structs "taas/structs"
+        uuid "github.com/nu7hatch/gouuid"
 )
 
 var Cronjob *cron.Cron
+var jobmap map[string]cron.EntryID
 
 func StartCron() {
+        jobmap = make(map[string]cron.EntryID)
+
 	Cronjob = cron.New()
 	Cronjob.Start()
 	var cronjobs []structs.Cronjob
@@ -30,13 +34,23 @@ func StartCron() {
 	}
 }
 
+func scheduleJob(diagnostic structs.DiagnosticSpec){
+    diagnostics.RunDiagnostic(diagnostic, true)
+}
+
 func GetCronjobs(params martini.Params, r render.Render) {
 	var cronjobs []structs.Cronjob
+        var newlist []structs.Cronjob
 	cronjobs, err := dbstore.GetCronjobs()
 	if err != nil {
 		fmt.Println(err)
 	}
-	r.JSON(200, cronjobs)
+        for _, element := range cronjobs {
+            element.Next=Cronjob.Entry(jobmap[element.Job+"-"+element.Jobspace+"-"+element.FrequencyMinutes]).Next
+            element.Prev=Cronjob.Entry(jobmap[element.Job+"-"+element.Jobspace+"-"+element.FrequencyMinutes]).Prev
+            newlist = append(newlist, element)
+        }
+	r.JSON(200, newlist)
 }
 func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjob, berr binding.Errors, r render.Render) {
 	//TODO: add audit
@@ -64,17 +78,15 @@ func addCronjob(job string, jobspace string, fm string) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	var releasehookpayload structs.ReleaseHookSpec
-	releasehookpayload.App.Name = diagnostic.App
-	releasehookpayload.Space.Name = diagnostic.Space
-	releasehookpayload.Action = "release"
-	releasehookpayload.Release.Result = "succeeded"
-
-	_, err = Cronjob.AddFunc("@every "+fm+"m", func() { hooks.ReleaseHookHandler(releasehookpayload, true) })
+        runiduuid, _ := uuid.NewV4()
+        runid := runiduuid.String()
+        diagnostic.RunID=runid
+        entryid, err := Cronjob.AddFunc("@every "+fm+"m", func() { scheduleJob(diagnostic) })
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+        jobmap[job+"-"+jobspace+"-"+fm]=entryid
 	fmt.Printf("Added cronjob for: %v-%v\n", job, jobspace)
 	return nil
 }
@@ -92,18 +104,7 @@ func deleteCronjob(id string) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	var entryid cron.EntryID
-	for _, element := range Cronjob.Entries() {
-		fmt.Printf("%+v\n", element)
-		s := fmt.Sprintf("%v", element.Schedule)
-		fmt.Println(s)
-		if s == "{"+cronjob.FrequencyMinutes+"m0s}" {
-			fmt.Println("found it")
-			entryid = element.ID
-			break
-		}
-	}
-	Cronjob.Remove(entryid)
+	Cronjob.Remove(jobmap[cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.FrequencyMinutes])
 	err = dbstore.DeleteCronjob(id)
 	if err != nil {
 		fmt.Println(err)

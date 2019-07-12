@@ -18,6 +18,8 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
+        "github.com/stackimpact/stackimpact-go"
+
 
 )
 
@@ -65,6 +67,14 @@ func createDB() {
 }
 
 func main() {
+if os.Getenv("STACKIMPACT_APIKEY") != ""{
+agent := stackimpact.Start(stackimpact.Options{
+  AgentKey: os.Getenv("STACKIMPACT_APIKEY"),
+  AppName: "taas-maru",
+})
+fmt.Printf("%+v\n", agent)
+}
+
 	checkEnv()
 	createDB()
 	dbstore.InitAuditPool()

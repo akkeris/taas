@@ -735,4 +735,6 @@ type TemplatePod struct {
     Job string `json:"job"`
     Jobspace string `json:"jobspace"`
     FrequencyMinutes string `json:"fm"`
+    Prev time.Time `json:"prev"`
+    Next time.Time `json:"next"`
 }
