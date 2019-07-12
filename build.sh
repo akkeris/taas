@@ -1,7 +1,13 @@
 #!/bin/sh
 
-cd /go/src
 go get  "github.com/nu7hatch/gouuid"
+cd /go/src/github.com
+mkdir robfig
+cd robfig
+git clone https://github.com/robfig/cron.git
+cd cron
+git checkout v3
+cd /go/src
 go get  "github.com/go-martini/martini"
 go get  "github.com/martini-contrib/binding"
 go get  "github.com/martini-contrib/render"
