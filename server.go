@@ -14,10 +14,11 @@ import (
 	structs "taas/structs"
 
 	artifacts "taas/artifacts"
-
+        cronjobs "taas/cronjobs"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
+
 )
 
 func checkEnv() {
@@ -68,6 +69,8 @@ func main() {
 	createDB()
 	dbstore.InitAuditPool()
 	artifacts.Init()
+        cronjobs.StartCron()
+
 	jobs.StartClient()
 	m := martini.Classic()
 	m.Use(render.Renderer())
@@ -99,6 +102,10 @@ func main() {
 	m.Post("/v1/diagnostic/:provided/hooks", diagnostics.CreateHooks)
 
 	m.Get("/v1/diagnostic/:provided/audits", dbstore.GetAudits)
+
+        m.Get("/v1/cronjobs", cronjobs.GetCronjobs)
+        m.Post("/v1/cronjob", binding.Json(structs.Cronjob{}), cronjobs.AddCronjob)
+        m.Delete("/v1/cronjob/:id", cronjobs.DeleteCronjob)
 	m.Use(martini.Static("static"))
 	m.Run()
 }

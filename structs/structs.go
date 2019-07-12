@@ -729,3 +729,10 @@ type TemplatePod struct {
             Type               string `json:"type"`
     }
 }
+
+ type Cronjob struct {
+    ID string `json:"id"`
+    Job string `json:"job"`
+    Jobspace string `json:"jobspace"`
+    FrequencyMinutes string `json:"fm"`
+}

@@ -18,6 +18,11 @@ func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors
 		fmt.Println(berr)
 		return
 	}
+        ReleaseHookHandler(releasehookpayload, false)
+}
+
+
+func ReleaseHookHandler(releasehookpayload structs.ReleaseHookSpec, isCron bool){
 	fmt.Println(releasehookpayload.App.Name)
 	fmt.Println(releasehookpayload.Space.Name)
 	fmt.Println(releasehookpayload.Action)
@@ -51,7 +56,7 @@ func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
 		spew.Dump(element)
-		diagnostics.RunDiagnostic(element)
+		diagnostics.RunDiagnostic(element, isCron)
 	}
 
 }

@@ -31,7 +31,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
+func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool) (e error) {
 
 	// may need to inject the run id into the config set at this point so that it is available to internal code if it will send logs
 
@@ -72,11 +72,11 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
 
-	go check(diagnostic)
+	go check(diagnostic, isCron)
 	return nil
 }
 
-func check(diagnostic structs.DiagnosticSpec) {
+func check(diagnostic structs.DiagnosticSpec, isCron bool) {
 
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
@@ -185,24 +185,25 @@ func check(diagnostic structs.DiagnosticSpec) {
 		}
 	}
 	fmt.Println("finishing....")
-	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
-	if err != nil {
-		fmt.Println(err)
-	}
-	diagnostic.OverallStatus = overallstatus
-	var loglines structs.LogLines
-	loglines.Logs = logs
-	diagnosticlogs.WriteLogES(diagnostic, loglines)
-        _, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
-        if err != nil {
-                fmt.Println(err)
-        }
-	err = dbstore.StoreRun(diagnostic)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("done")
-	fmt.Println(overallstatus)
+        diagnostic.OverallStatus = overallstatus
+        var promotestatus string
+        if !isCron || (isCron && overallstatus != "success"){
+	   logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
+	   if err != nil {
+	   	fmt.Println(err)
+	   }
+	   var loglines structs.LogLines
+	   loglines.Logs = logs
+	   diagnosticlogs.WriteLogES(diagnostic, loglines)
+           _, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
+           if err != nil {
+                   fmt.Println(err)
+           }
+        
+          err = dbstore.StoreRun(diagnostic)
+	  if err != nil {
+	  	fmt.Println(err)
+	  }
 	var result structs.ResultSpec
 	result.Payload.Lifecycle = "finished"
 	result.Payload.Outcome = overallstatus
@@ -229,9 +230,6 @@ func check(diagnostic structs.DiagnosticSpec) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	notifications.PostResults(result)
-	var promotestatus string
-	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
@@ -274,10 +272,12 @@ func check(diagnostic structs.DiagnosticSpec) {
 		promotestatus, err = pipelines.PromoteApp(promotion)
 		if err != nil {
 			fmt.Println(err)
-		}
-		fmt.Println(promotestatus)
-	}
-	notifications.PostToSlack(diagnostic, overallstatus, promotestatus)
+                }
+                fmt.Println(promotestatus)
+                }
+           }
+
+	notifications.PostToSlack(diagnostic, overallstatus, promotestatus, isCron)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
@@ -651,7 +651,7 @@ func rerun(space string, app string, action string, result string, buildid strin
 		}
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-		RunDiagnostic(element)
+		RunDiagnostic(element, false)
 	}
 	return nil
 }
