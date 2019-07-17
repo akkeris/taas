@@ -31,7 +31,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronid string) (e error) {
+func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronjob) (e error) {
 
 	// may need to inject the run id into the config set at this point so that it is available to internal code if it will send logs
 
@@ -40,6 +40,7 @@ if isCron {
                 runid := runiduuid.String()
                 diagnostic.RunID=runid
                 diagnostic.Startdelay=1
+                diagnostic.Command = cronjob.Command
 }
 
 	var newvar structs.Varspec
@@ -79,11 +80,11 @@ if isCron {
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
 
-	go check(diagnostic, isCron, cronid)
+	go check(diagnostic, isCron, cronjob)
 	return nil
 }
 
-func check(diagnostic structs.DiagnosticSpec, isCron bool, cronid string) {
+func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronjob) {
 
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
@@ -190,6 +191,12 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronid string) {
 			endtime = time.Now().UTC()
 			break
 		}
+                if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
+                        fmt.Println("JOB FAILED")
+                        overallstatus = "failed"
+                        endtime = time.Now().UTC()
+                        break
+                }
 	}
 	fmt.Println("finishing....")
         diagnostic.OverallStatus = overallstatus
@@ -284,7 +291,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronid string) {
                 }
            }
         if isCron{
-          err = dbstore.StoreCronRun(diagnostic,starttime, endtime,cronid)
+          err = dbstore.StoreCronRun(diagnostic,starttime, endtime, cronjob.ID)
           if err != nil {
                 fmt.Println(err)
           }
@@ -663,7 +670,7 @@ func rerun(space string, app string, action string, result string, buildid strin
 		}
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-		RunDiagnostic(element, false,"")
+		RunDiagnostic(element, false, structs.Cronjob{})
 	}
 	return nil
 }

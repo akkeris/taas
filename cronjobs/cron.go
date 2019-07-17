@@ -34,8 +34,8 @@ func StartCron() {
 	}
 }
 
-func scheduleJob(diagnostic structs.DiagnosticSpec, cronid string) {
-	diagnostics.RunDiagnostic(diagnostic, true, cronid)
+func scheduleJob(diagnostic structs.DiagnosticSpec, cronjob structs.Cronjob) {
+	diagnostics.RunDiagnostic(diagnostic, true, cronjob)
 }
 
 func GetCronjobRuns(req *http.Request, params martini.Params, r render.Render) {
@@ -113,7 +113,7 @@ func addCronjob(req *http.Request, cronjob structs.Cronjob) (e error) {
 	runiduuid, _ := uuid.NewV4()
 	runid := runiduuid.String()
 	diagnostic.RunID = runid
-	entryid, err := Cronjob.AddFunc(cronjob.Cronspec, func() { scheduleJob(diagnostic, cronjob.ID) })
+	entryid, err := Cronjob.AddFunc(cronjob.Cronspec, func() { scheduleJob(diagnostic, cronjob) })
 	if err != nil {
 		fmt.Println(err)
 		return err

@@ -82,7 +82,7 @@ func GetCronjobRuns(id string, runs string, filter string) (j []structs.CronjobR
 
 func GetCronjobs() (j []structs.Cronjob, e error) {
 	var cronjobs []structs.Cronjob
-	selectstring := "select id, job, jobspace, cronspec from cronjobs"
+	selectstring := "select id, job, jobspace, cronspec, coalesce(command,null,'') from cronjobs"
 	stmt, err := cdb.Prepare(selectstring)
 	if err != nil {
 		fmt.Println(err)
@@ -96,7 +96,8 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 		var job string
 		var jobspace string
 		var cs string
-		err := rows.Scan(&id, &job, &jobspace, &cs)
+                var command string
+		err := rows.Scan(&id, &job, &jobspace, &cs,&command)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -104,6 +105,7 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 		current.Job = job
 		current.Jobspace = jobspace
 		current.Cronspec = cs
+                current.Command = command
 		cronjobs = append(cronjobs, current)
 	}
 	return cronjobs, nil
@@ -112,7 +114,7 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 func AddCronJob(cronjob structs.Cronjob) (e error) {
 	iduuid, _ := uuid.NewV4()
 	id := iduuid.String()
-	var stmtstring string = "insert into cronjobs (id, job,  jobspace, cronspec) values ($1,$2,$3,$4)"
+	var stmtstring string = "insert into cronjobs (id, job,  jobspace, cronspec, command) values ($1,$2,$3,$4,$5)"
 
 	stmt, err := cdb.Prepare(stmtstring)
 	if err != nil {
@@ -120,7 +122,7 @@ func AddCronJob(cronjob structs.Cronjob) (e error) {
 		return err
 	}
 
-	_, inserterr := stmt.Exec(id, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec)
+	_, inserterr := stmt.Exec(id, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec,cronjob.Command)
 	if inserterr != nil {
 		fmt.Println(inserterr)
 		return inserterr
