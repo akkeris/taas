@@ -31,9 +31,16 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool) (e error) {
+func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronid string) (e error) {
 
 	// may need to inject the run id into the config set at this point so that it is available to internal code if it will send logs
+
+if isCron {
+                runiduuid, _ := uuid.NewV4()
+                runid := runiduuid.String()
+                diagnostic.RunID=runid
+                diagnostic.Startdelay=1
+}
 
 	var newvar structs.Varspec
 	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
@@ -72,11 +79,11 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool) (e error) {
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
 
-	go check(diagnostic, isCron)
+	go check(diagnostic, isCron, cronid)
 	return nil
 }
 
-func check(diagnostic structs.DiagnosticSpec, isCron bool) {
+func check(diagnostic structs.DiagnosticSpec, isCron bool, cronid string) {
 
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
@@ -276,7 +283,12 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool) {
                 fmt.Println(promotestatus)
                 }
            }
-
+        if isCron{
+          err = dbstore.StoreCronRun(diagnostic,starttime, endtime,cronid)
+          if err != nil {
+                fmt.Println(err)
+          }
+        }
 	notifications.PostToSlack(diagnostic, overallstatus, promotestatus, isCron)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
@@ -651,7 +663,7 @@ func rerun(space string, app string, action string, result string, buildid strin
 		}
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-		RunDiagnostic(element, false)
+		RunDiagnostic(element, false,"")
 	}
 	return nil
 }

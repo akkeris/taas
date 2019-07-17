@@ -56,7 +56,7 @@ func ReleaseHookHandler(releasehookpayload structs.ReleaseHookSpec, isCron bool)
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
 		spew.Dump(element)
-		diagnostics.RunDiagnostic(element, isCron)
+		diagnostics.RunDiagnostic(element, isCron,"")
 	}
 
 }

@@ -29,6 +29,47 @@ func InitAuditPool() {
 	}
 
 }
+
+func AddCronjobDeleteAudit(req *http.Request, id string, cronjob structs.Cronjob) {
+        audituuid, _ := uuid.NewV4()
+        auditid := audituuid.String()
+        user, err := auth.GetUser(req)
+        if err != nil {
+                fmt.Println(err)
+        }
+        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
+
+        stmt, err := db.Prepare(stmtstring)
+        if err != nil {
+                db.Close()
+        }
+
+        _, inserterr := stmt.Exec(auditid, id, user, "cronjobdestroy", cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
+        if inserterr != nil {
+                fmt.Println(inserterr)
+        }
+}
+
+func AddCronjobCreateAudit(req *http.Request, id string, cronjob structs.Cronjob) {
+        audituuid, _ := uuid.NewV4()
+        auditid := audituuid.String()
+        user, err := auth.GetUser(req)
+        if err != nil {
+                fmt.Println(err)
+        }
+        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
+
+        stmt, err := db.Prepare(stmtstring)
+        if err != nil {
+                db.Close()
+        }
+
+        _, inserterr := stmt.Exec(auditid, id, user, "cronjobcreate", cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
+        if inserterr != nil {
+                fmt.Println(inserterr)
+        }
+}
+
 func AddConfigUnsetAudit(req *http.Request, id string, auditkey string) {
 	audituuid, _ := uuid.NewV4()
 	auditid := audituuid.String()
