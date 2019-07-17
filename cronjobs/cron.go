@@ -41,12 +41,22 @@ func scheduleJob(diagnostic structs.DiagnosticSpec, cronid string) {
 func GetCronjobRuns(req *http.Request, params martini.Params, r render.Render) {
 	var cronjobruns []structs.CronjobRun
 	var runs string
-	if len(req.URL.Query()["runs"]) < 1 {
-		runs = "10"
-	} else {
-		runs = req.URL.Query()["runs"][0]
-	}
-	cronjobruns, err := dbstore.GetCronjobRuns(params["id"], runs)
+        var filter string
+        runs = ""
+        filter = ""
+        if len(req.URL.Query()["runs"]) >= 1 {
+            runs = req.URL.Query()["runs"][0]
+        }
+        if len(req.URL.Query()["filter"]) >= 1 {
+            filter = req.URL.Query()["filter"][0]
+        }
+        if runs == "" {
+             runs = "10"
+        }
+        if filter == "" {
+            filter = "all"
+        }
+	cronjobruns, err := dbstore.GetCronjobRuns(params["id"], runs, filter)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
