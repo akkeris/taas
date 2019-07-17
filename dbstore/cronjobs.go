@@ -44,9 +44,9 @@ func StoreCronRun(diagnostic structs.DiagnosticSpec, starttime time.Time, endtim
         return nil
 }
 
-func GetCronjobRuns(id string) (j []structs.CronjobRun, e error) {
+func GetCronjobRuns(id string, runs string) (j []structs.CronjobRun, e error) {
         var cronjobruns []structs.CronjobRun
-        selectstring := "select * from (select starttime, endtime, overallstatus, runid from cronruns where cronid = $1 order by starttime desc limit 10) as t order by starttime asc"
+        selectstring := "select * from (select starttime, endtime, overallstatus, runid from cronruns where cronid = $1 order by starttime desc limit "+runs+") as t order by starttime asc"
         stmt, err := cdb.Prepare(selectstring)
         if err != nil {
                 fmt.Println(err)
