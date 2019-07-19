@@ -42,7 +42,7 @@ type PipelineSpec []struct {
 }
 
 type ActionSpec struct {
-	Messages []string `json:"messages"`
+	Messages []string `json:"messages,omitempty"`
 	Name     string   `json:"name"`
 	Status   string   `json:"status"`
 }
