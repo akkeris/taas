@@ -183,6 +183,12 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
+                if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
+                        fmt.Println("JOB FAILED")
+                        overallstatus = "failed"
+                        endtime = time.Now().UTC()
+                        break
+                }
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
