@@ -218,7 +218,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var action structs.ActionSpec
 	action.Name = diagnostic.Job + "-" + diagnostic.JobSpace
 	action.Status = overallstatus
-	action.Messages = logs
+	//action.Messages = logs
 	var actions []structs.ActionSpec
 	actions = append(actions, action)
 	step.Actions = actions
