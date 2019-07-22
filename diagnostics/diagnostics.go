@@ -675,6 +675,9 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
+        if strings.HasPrefix(diagnostic.Slackchannel, "https://hooks.slack.com"){
+                diagnostic.Slackchannel="[redacted]"
+        }
 	envvars := diagnostic.Env
 	var newenvvars []structs.EnvironmentVariable
 	protectedspace, err := akkeris.IsProtectedSpace(diagnostic.Space)
