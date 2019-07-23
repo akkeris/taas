@@ -23,7 +23,7 @@ type Attachment struct {
 }
 
 type Slack struct {
-	Channel     string       `json:"channel"`
+	Channel     string       `json:"channel,omitempty"`
 	Username    string       `json:"username"`
 	Text        string       `json:"text"`
 	UnfurlLinks bool         `json:"unfurl_links"`
@@ -45,9 +45,13 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 	if diagnostic.Slackchannel == "" {
 		slack.Channel = "#" + os.Getenv("SLACK_NOTIFICATION_CHANNEL_DEFAULT")
 	}
-
-	slackurl := os.Getenv("SLACK_NOTIFICATION_URL")
-
+        var slackurl string 
+        if strings.HasPrefix(diagnostic.Slackchannel,"https://hooks.slack.com"){
+             slackurl = diagnostic.Slackchannel
+             slack.Channel=""
+        }else{
+	     slackurl = os.Getenv("SLACK_NOTIFICATION_URL")
+        }
 	slack.Username = "Test Results"
 
 	slack.Text = "Job: " + diagnostic.JobSpace + "/" + diagnostic.Job
@@ -87,7 +91,6 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 
 	}
 	fmt.Println(slack.Text)
-
 	if os.Getenv("ENABLE_SLACK_NOTIFICATIONS") == "true" {
 		req, err := http.NewRequest("POST", slackurl, bytes.NewBuffer(p))
 		if err != nil {
@@ -132,7 +135,15 @@ func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string, promot
 		slack.Channel = "#" + os.Getenv("SLACK_NOTIFICATION_CHANNEL_DEFAULT")
 	}
 
-	slackurl := os.Getenv("SLACK_NOTIFICATION_URL")
+
+        var slackurl string
+        if strings.HasPrefix(diagnostic.Slackchannel,"https://hooks.slack.com"){
+             slackurl = diagnostic.Slackchannel
+             slack.Channel=""
+        }else{
+             slackurl = os.Getenv("SLACK_NOTIFICATION_URL")
+        }
+
 	slack.Username = "Promotion Action"
 	if status == "success" && diagnostic.PipelineName != "manual" && promotestatus=="successful"  {
 		slack.Text = "Promotion from " + diagnostic.TransitionFrom + " to " + diagnostic.TransitionTo + " triggered with result "+promotestatus
