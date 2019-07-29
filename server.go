@@ -99,6 +99,7 @@ func main() {
 	m.Post("/v1/diagnostic/:provided/hooks", diagnostics.CreateHooks)
 
 	m.Get("/v1/diagnostic/:provided/audits", dbstore.GetAudits)
+        m.Get("/v1/taillogs", diagnosticlogs.TailLogs)
 	m.Use(martini.Static("static"))
 	m.Run()
 }

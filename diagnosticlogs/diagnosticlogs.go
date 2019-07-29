@@ -10,11 +10,21 @@ import (
 	"strings"
 	structs "taas/structs"
 	"time"
-
+        uuid "github.com/nu7hatch/gouuid"
+        cluster "github.com/bsm/sarama-cluster"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 )
+type LogObject struct {
+        Log    string    `json:"log"`
+        Kubernetes struct {
+                ContainerName    string `json:"container_name"`
+                NamespaceName    string `json:"namespace_name"`
+                PodName          string `json:"pod_name"`
+        } `json:"kubernetes"`
+        Topic        string `json:"topic"`
+}
 
 func GetLogs(space string, job string, instance string) (l []string, e error) {
 	akkerisapiurl := os.Getenv("AKKERIS_API_URL")
@@ -342,4 +352,55 @@ func GetRunInfo(params martini.Params, r render.Render) {
 	fmt.Println(logs)
 
 	r.JSON(200, logs)
+}
+
+func TailLogs(w http.ResponseWriter, r *http.Request) {
+        f, ok := w.(http.Flusher)
+        if !ok {
+                http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+                return
+        }
+        jobspace := r.URL.Query()["jobspace"][0]
+        job := r.URL.Query()["job"][0]
+        topic := jobspace
+        cguuid, _ := uuid.NewV4()
+        consumergroup := cguuid.String()
+
+        var consumer *cluster.Consumer
+        brokers := os.Getenv("KAFKA_BROKERS")
+        config := cluster.NewConfig()
+        config.Consumer.Return.Errors = true
+        config.Group.Return.Notifications = true
+        consumer, err := cluster.NewConsumer(strings.Split(brokers, ","), consumergroup, strings.Split(topic, ","), config)
+        if err != nil {
+                fmt.Println(err)
+        }
+        defer consumer.Close()
+        w.Header().Set("Content-Type", "text/event-stream")
+        w.Header().Set("Cache-Control", "no-cache")
+        w.Header().Set("Connection", "keep-alive")
+        w.Header().Set("Transfer-Encoding", "chunked")
+        for {
+                select {
+                case msg, more := <-consumer.Messages():
+                        if more {
+                                var log LogObject
+                                err = json.Unmarshal(msg.Value, &log)
+                                if log.Kubernetes.ContainerName == job && log.Kubernetes.NamespaceName == jobspace {
+                                        event := log.Log
+                                        fmt.Fprintf(w, event)
+                                        f.Flush()
+                                }
+                                consumer.MarkOffset(msg, "")
+                        }
+                case err, more := <-consumer.Errors():
+                        if more {
+                                fmt.Printf("Error: %s\n", err.Error())
+                        }
+                case ntf, more := <-consumer.Notifications():
+                        if more {
+                                fmt.Printf("Rebalanced: %+v\n", ntf)
+                        }
+                }
+        }
 }
