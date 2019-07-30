@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+        dbstore "taas/dbstore"
 	structs "taas/structs"
 	"time"
         uuid "github.com/nu7hatch/gouuid"
@@ -354,14 +355,24 @@ func GetRunInfo(params martini.Params, r render.Render) {
 	r.JSON(200, logs)
 }
 
-func TailLogs(w http.ResponseWriter, r *http.Request) {
+func TailLogs(w http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
+        fmt.Println(params["provided"])
+        diagnostic, err := dbstore.FindDiagnostic(params["provided"])
+        if err != nil {
+                fmt.Println(err)
+                r.JSON(500, map[string]interface{}{"response": err})
+        }
+        if diagnostic.ID == "" {
+                r.JSON(500, map[string]interface{}{"response": "invalid test"})
+                return
+        }
         f, ok := w.(http.Flusher)
         if !ok {
                 http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
                 return
         }
-        jobspace := r.URL.Query()["jobspace"][0]
-        job := r.URL.Query()["job"][0]
+        jobspace := diagnostic.JobSpace
+        job := diagnostic.Job
         topic := jobspace
         cguuid, _ := uuid.NewV4()
         consumergroup := cguuid.String()
@@ -371,7 +382,7 @@ func TailLogs(w http.ResponseWriter, r *http.Request) {
         config := cluster.NewConfig()
         config.Consumer.Return.Errors = true
         config.Group.Return.Notifications = true
-        consumer, err := cluster.NewConsumer(strings.Split(brokers, ","), consumergroup, strings.Split(topic, ","), config)
+        consumer, err = cluster.NewConsumer(strings.Split(brokers, ","), consumergroup, strings.Split(topic, ","), config)
         if err != nil {
                 fmt.Println(err)
         }
