@@ -135,21 +135,21 @@ type DiagnosticSpec struct {
 }
 
 type DiagnosticSpecAudit struct {
-        ID             string                `json:"id"`
-        Space          string                `json:"space,omitempty"`
-        App            string                `json:"app,omitempty"`
-        Action         string                `json:"action,omitempty"`
-        Result         string                `json:"result,omitempty"`
-        Job            string                `json:"job,omitempty"`
-        JobSpace       string                `json:"jobspace,omitempty"`
-        Image          string                `json:"image"`
-        PipelineName   string                `json:"pipelinename"`
-        TransitionFrom string                `json:"transitionfrom"`
-        TransitionTo   string                `json:"transitionto"`
-        Timeout        int                   `json:"timeout"`
-        Startdelay     int                   `json:"startdelay"`
-        Slackchannel   string                `json:"slackchannel"`
-        Command        string                `json:"command"`
+	ID             string `json:"id"`
+	Space          string `json:"space,omitempty"`
+	App            string `json:"app,omitempty"`
+	Action         string `json:"action,omitempty"`
+	Result         string `json:"result,omitempty"`
+	Job            string `json:"job,omitempty"`
+	JobSpace       string `json:"jobspace,omitempty"`
+	Image          string `json:"image"`
+	PipelineName   string `json:"pipelinename"`
+	TransitionFrom string `json:"transitionfrom"`
+	TransitionTo   string `json:"transitionto"`
+	Timeout        int    `json:"timeout"`
+	Startdelay     int    `json:"startdelay"`
+	Slackchannel   string `json:"slackchannel"`
+	Command        string `json:"command"`
 }
 
 type ESlogSpecIn struct {
@@ -583,12 +583,12 @@ type SpaceInfo struct {
 }
 
 type OneOffSpec struct {
-	Space   string                `json:"space"`
-	Podname string                `json:"podname"`
-        Containername string          `json:"containername"`
-	Image   string                `json:"image"`
-	Command string                `json:"command,omitempty"`
-	Env     []EnvironmentVariable `json:"env"`
+	Space         string                `json:"space"`
+	Podname       string                `json:"podname"`
+	Containername string                `json:"containername"`
+	Image         string                `json:"image"`
+	Command       string                `json:"command,omitempty"`
+	Env           []EnvironmentVariable `json:"env"`
 }
 
 type OneOffPod struct {
@@ -658,74 +658,163 @@ type PromoteStatus struct {
 }
 
 type AuthUser struct {
-	Email                        string        `json:"email"`
-        Cn                           string        `json:"cn"`
+	Email string `json:"email"`
+	Cn    string `json:"cn"`
 }
 
 type Audit struct {
-        Auditid string `json:"auditid"`
-        Id string `json:"id"`
-        Audituser string `json:"audituser"`
-        Audittype string `json:"audittype"`
-        Auditkey string `json:"auditkey"`
-        Newvalue string `json:"newvalue"`
-        Createdat time.Time `json:"created_at"`
+	Auditid   string    `json:"auditid"`
+	Id        string    `json:"id"`
+	Audituser string    `json:"audituser"`
+	Audittype string    `json:"audittype"`
+	Auditkey  string    `json:"auditkey"`
+	Newvalue  string    `json:"newvalue"`
+	Createdat time.Time `json:"created_at"`
 }
 
 type PodDescribe struct {
-    Metadata   struct {
-        Name              string    `json:"name"`
-        Namespace         string    `json:"namespace"`
-    }
-    Spec struct {
-        Containers []struct {
-            Name  string `json:"name"`
-            Image string `json:"image"`
-        } `json:"containers"`
-        NodeName                      string `json:"nodeName"`
-    } `json:"spec"`
-    Status struct {
-        Phase      string `json:"phase"`
-        Conditions []struct {
-            Type               string      `json:"type"`
-            Status             string      `json:"status"`
-            Reason             string      `json:"reason,omitempty"`
-            Message            string      `json:"message,omitempty"`
-        } `json:"conditions"`
-        StartTime         time.Time `json:"startTime"`
-    } `json:"status"`
-    Events EventList `json:"events"`
+	Metadata struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	Spec struct {
+		Containers []struct {
+			Name  string `json:"name"`
+			Image string `json:"image"`
+		} `json:"containers"`
+		NodeName string `json:"nodeName"`
+	} `json:"spec"`
+	Status struct {
+		Phase      string `json:"phase"`
+		Conditions []struct {
+			Type    string `json:"type"`
+			Status  string `json:"status"`
+			Reason  string `json:"reason,omitempty"`
+			Message string `json:"message,omitempty"`
+		} `json:"conditions"`
+		StartTime time.Time `json:"startTime"`
+	} `json:"status"`
+	Events EventList `json:"events"`
 }
 
 type EventList struct {
-    Items []struct {
-	LastTimestamp      time.Time   `json:"lastTimestamp"`
-        Reason  string `json:"reason"`
-        Message string `json:"message"`
-        Type    string      `json:"type"`
-    } `json:"items"`
+	Items []struct {
+		LastTimestamp time.Time `json:"lastTimestamp"`
+		Reason        string    `json:"reason"`
+		Message       string    `json:"message"`
+		Type          string    `json:"type"`
+	} `json:"items"`
 }
 
 type TemplatePod struct {
-   Name string
-   Space string
-   Node string
-   StartTime time.Time
-   Status string
-   Containers []struct {
-            Name  string `json:"name"`
-            Image string `json:"image"`
-   }
-   Conditions []struct {
-            Type               string      `json:"type"`
-            Status             string      `json:"status"`
-            Reason             string      `json:"reason,omitempty"`
-            Message            string      `json:"message,omitempty"`
-   }
-   Events []struct {
-            LastTimestamp      time.Time   `json:"lastTimestamp"`
-            Reason             string `json:"reason"`
-            Message            string `json:"message"`
-            Type               string `json:"type"`
-    }
+	Name       string
+	Space      string
+	Node       string
+	StartTime  time.Time
+	Status     string
+	Containers []struct {
+		Name  string `json:"name"`
+		Image string `json:"image"`
+	}
+	Conditions []struct {
+		Type    string `json:"type"`
+		Status  string `json:"status"`
+		Reason  string `json:"reason,omitempty"`
+		Message string `json:"message,omitempty"`
+	}
+	Events []struct {
+		LastTimestamp time.Time `json:"lastTimestamp"`
+		Reason        string    `json:"reason"`
+		Message       string    `json:"message"`
+		Type          string    `json:"type"`
+	}
+}
+
+type PreviewReleasedHookSpec struct {
+	App struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
+	Dyno struct {
+		Type string `json:"type"`
+	} `json:"dyno"`
+	Key    string `json:"key"`
+	Action string `json:"action"`
+	Slug   struct {
+		Image      string `json:"image"`
+		SourceBlob struct {
+			Checksum string `json:"checksum"`
+			URL      string `json:"url"`
+			Version  string `json:"version"`
+			Commit   string `json:"commit"`
+			Author   string `json:"author"`
+			Repo     string `json:"repo"`
+			Branch   string `json:"branch"`
+			Message  string `json:"message"`
+		} `json:"source_blob"`
+		ID string `json:"id"`
+	} `json:"slug"`
+	ReleasedAt time.Time `json:"released_at"`
+	Release    struct {
+		ID        string    `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Version   int       `json:"version"`
+	} `json:"release"`
+	SourceApp struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"source_app"`
+}
+
+type PreviewCreatedHookSpec struct {
+	Action string `json:"action"`
+	App    struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
+	Change  string `json:"change"`
+	Preview struct {
+		App struct {
+			Name string `json:"name"`
+			ID   string `json:"id"`
+		} `json:"app"`
+		AppSetup struct {
+			ID        string    `json:"id"`
+			CreatedAt time.Time `json:"created_at"`
+			UpdatedAt time.Time `json:"updated_at"`
+			App       struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			} `json:"app"`
+			Build struct {
+				ID              interface{} `json:"id"`
+				Status          string      `json:"status"`
+				OutputStreamURL interface{} `json:"output_stream_url"`
+			} `json:"build"`
+			Progress           int           `json:"progress"`
+			Status             string        `json:"status"`
+			FailureMessage     string        `json:"failure_message"`
+			ManifestErrors     []interface{} `json:"manifest_errors"`
+			Postdeploy         interface{}   `json:"postdeploy"`
+			ResolvedSuccessURL interface{}   `json:"resolved_success_url"`
+		} `json:"app_setup"`
+	} `json:"preview"`
+	Sites []struct {
+		ID     string `json:"id"`
+		Domain string `json:"domain"`
+		Region struct {
+			Name string `json:"name"`
+			ID   string `json:"id"`
+		} `json:"region"`
+		CreatedAt  time.Time     `json:"created_at"`
+		UpdatedAt  time.Time     `json:"updated_at"`
+		Compliance []interface{} `json:"compliance"`
+	} `json:"sites"`
 }

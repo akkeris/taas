@@ -1,9 +1,8 @@
 package diagnostics
 
 import (
+	"bufio"
 	"bytes"
-        "bufio"
-        "text/template"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	artifacts "taas/artifacts"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	githubapi "taas/githubapi"
@@ -20,8 +20,8 @@ import (
 	jobs "taas/jobs"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
-        artifacts "taas/artifacts"
 	structs "taas/structs"
+	"text/template"
 	"time"
 
 	"github.com/go-martini/martini"
@@ -183,12 +183,12 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
-                if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
-                        fmt.Println("JOB FAILED")
-                        overallstatus = "failed"
-                        endtime = time.Now().UTC()
-                        break
-                }
+		if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
+			fmt.Println("JOB FAILED")
+			overallstatus = "failed"
+			endtime = time.Now().UTC()
+			break
+		}
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
@@ -199,10 +199,10 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var loglines structs.LogLines
 	loglines.Logs = logs
 	diagnosticlogs.WriteLogES(diagnostic, loglines)
-        _, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
-        if err != nil {
-                fmt.Println(err)
-        }
+	_, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
+	if err != nil {
+		fmt.Println(err)
+	}
 	err = dbstore.StoreRun(diagnostic)
 	if err != nil {
 		fmt.Println(err)
@@ -951,23 +951,23 @@ func CreateHooks(params martini.Params, r render.Render) {
 	r.JSON(200, map[string]interface{}{"status": "hooks added"})
 }
 
-func describePodAndUploadToS3(space string, name string, runid string) (p structs.TemplatePod, e error){
-     var templatepod structs.TemplatePod
-     object, err := akkeris.DescribePod(space, name)
-     if err != nil {
-                fmt.Println(err)
-                return templatepod, err
-     }
-     templatepod.Name=object.Metadata.Name
-     templatepod.Space=object.Metadata.Namespace
-     templatepod.Node = object.Spec.NodeName
-     templatepod.StartTime = object.Status.StartTime
-     templatepod.Status = object.Status.Phase
-     templatepod.Containers = object.Spec.Containers
-     templatepod.Conditions = object.Status.Conditions
-     templatepod.Events = object.Events.Items
+func describePodAndUploadToS3(space string, name string, runid string) (p structs.TemplatePod, e error) {
+	var templatepod structs.TemplatePod
+	object, err := akkeris.DescribePod(space, name)
+	if err != nil {
+		fmt.Println(err)
+		return templatepod, err
+	}
+	templatepod.Name = object.Metadata.Name
+	templatepod.Space = object.Metadata.Namespace
+	templatepod.Node = object.Spec.NodeName
+	templatepod.StartTime = object.Status.StartTime
+	templatepod.Status = object.Status.Phase
+	templatepod.Containers = object.Spec.Containers
+	templatepod.Conditions = object.Status.Conditions
+	templatepod.Events = object.Events.Items
 
-describetemplate:=`
+	describetemplate := `
 Name:               {{ .Name }}
 Namespace:          {{ .Space }}
 Node:               {{ .Node }}
@@ -995,15 +995,14 @@ Events:
   Message: {{ .Message }}
 {{end}}
 `
-var t *template.Template
-t = template.Must(template.New("desribe").Parse(describetemplate))
-var b bytes.Buffer
-wr := bufio.NewWriter(&b)
-err = t.Execute(wr, templatepod)
-fmt.Println(err)
-wr.Flush()
+	var t *template.Template
+	t = template.Must(template.New("desribe").Parse(describetemplate))
+	var b bytes.Buffer
+	wr := bufio.NewWriter(&b)
+	err = t.Execute(wr, templatepod)
+	fmt.Println(err)
+	wr.Flush()
 
-artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)
-return templatepod, nil
+	artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)
+	return templatepod, nil
 }
-
