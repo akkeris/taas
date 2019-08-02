@@ -101,6 +101,32 @@ func check(diagnostic structs.DiagnosticSpec) {
 	}
 	oneoff.Env = fetched
 
+	var injectvarname string
+	var injectvarvalue string
+
+	// Allow users to set `PREVIEW_URL_VAR` to the name of the config var that they want
+	// us to inject the URL of the preview app into
+	if diagnostic.Action == "preview-released" {
+		// Find the PREVIEW_URL_VAR to replace
+		for _, element := range fetched {
+			if element.Name == "PREVIEW_URL_VAR" {
+				injectvarname = element.Value
+				break
+			}
+		}
+		// Replace the target config var with the URL of the preview app
+		for _, element := range fetched {
+			if element.Name == injectvarname {
+				injectvarvalue = element.Value
+				var newVar structs.Varspec
+				newVar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+				newVar.Varname = injectvarname
+				newVar.Varvalue = "http://" + diagnostic.App + "." + diagnostic.Space + ".svc.cluster.local"
+				akkeris.UpdateVar(newVar)
+			}
+		}
+	}
+
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	time.Sleep(time.Second * 5)
 	akkeris.Startpod(oneoff)
@@ -283,6 +309,17 @@ func check(diagnostic structs.DiagnosticSpec) {
 		}
 		fmt.Println(promotestatus)
 	}
+
+	// Set the value of the config var targeted by `PREVIEW_URL_VAR`
+	// back to the original value
+	if diagnostic.Action == "preview-released" {
+		var newVar structs.Varspec
+		newVar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+		newVar.Varname = injectvarname
+		newVar.Varvalue = injectvarvalue
+		akkeris.UpdateVar(newVar)
+	}
+
 	notifications.PostToSlack(diagnostic, overallstatus, promotestatus)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
