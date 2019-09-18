@@ -166,16 +166,16 @@ func isUUID(uuid string) bool {
 }
 
 func FindDiagnosticByApp(app string) (d structs.DiagnosticSpec, e error) {
-	var selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where app||'-'||space = $1"
+	var selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false) from diagnostics where app||'-'||space = $1"
 	return findDiagnostic(app, selectstring)
 }
 
 func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
 	var selectstring string
 	if !isUUID(provided) {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where job||'-'||jobspace = $1"
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false) from diagnostics where job||'-'||jobspace = $1"
 	} else {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where id = $1"
+		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false) from diagnostics where id = $1"
 	}
 	return findDiagnostic(provided, selectstring)
 }

@@ -132,6 +132,7 @@ type DiagnosticSpec struct {
 	RunID          string                `json:"runid"`
 	OverallStatus  string                `json:"overallstatus"`
 	Command        string                `json:"command"`
+	TestPreviews   bool                  `json:"testpreviews,omitempty"` // Run diagnostic on preview apps
 }
 
 type DiagnosticSpecAudit struct {
@@ -817,4 +818,15 @@ type PreviewCreatedHookSpec struct {
 		UpdatedAt  time.Time     `json:"updated_at"`
 		Compliance []interface{} `json:"compliance"`
 	} `json:"sites"`
+}
+
+type DestroyHookSpec struct {
+	Action string `json:"action"`
+	App    struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
 }

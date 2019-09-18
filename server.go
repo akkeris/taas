@@ -83,7 +83,7 @@ func main() {
 	m.Get("/v1/diagnostics/runs/info/:runid", diagnosticlogs.GetRunInfo)
 	m.Get("/v1/diagnostic/rerun", diagnostics.Rerun)
 	m.Get("/v1/diagnostic/:provided", diagnostics.GetDiagnosticByNameOrID)
-	m.Delete("/v1/diagnostic/:provided", diagnostics.DeleteDiagnostic)
+	m.Delete("/v1/diagnostic/:provided", diagnostics.HTTPDeleteDiagnostic)
 	m.Post("/v1/diagnostic/:provided/bind/**", diagnostics.BindDiagnosticSecret)
 	m.Delete("/v1/diagnostic/:provided/bind/**", diagnostics.UnbindDiagnosticSecret)
 
@@ -102,6 +102,7 @@ func main() {
 
 	m.Post("/v1/previewreleasedhook", binding.Json(structs.PreviewReleasedHookSpec{}), hooks.PreviewReleasedHook)
 	m.Post("/v1/previewcreatedhook", binding.Json(structs.PreviewCreatedHookSpec{}), hooks.PreviewCreatedHook)
+	m.Post("/v1/previewdestroyhook", binding.Json(structs.DestroyHookSpec{}), hooks.PreviewDestroyHook)
 
 	m.Use(martini.Static("static"))
 	m.Run()

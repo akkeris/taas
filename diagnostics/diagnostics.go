@@ -418,7 +418,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 
 }
 
-func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
+func HTTPDeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
 	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		fmt.Println(err)
@@ -430,7 +430,7 @@ func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render)
 		return
 	}
 
-	err = deleteDiagnostic(diagnostic)
+	err = DeleteDiagnostic(diagnostic)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
@@ -442,7 +442,7 @@ func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render)
 
 }
 
-func deleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
+func DeleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 
 	err := akkeris.DeleteService(diagnostic)
 	if err != nil {
@@ -533,6 +533,15 @@ func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
+	// Add hooks to run diagnostic on preview apps if the "TestPreviews" property is true
+	if diagnosticspec.TestPreviews {
+		err = akkeris.CreatePreviewHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -541,26 +550,36 @@ func UpdateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, 
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 	}
+
 	err := updateDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
 		return
-
 	}
+
+	if diagnosticspec.TestPreviews {
+		err = akkeris.CreatePreviewHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else if diagnosticspec.TestPreviews {
+		err = akkeris.DeletePreviewHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	dbstore.AddDiagnosticUpdateAudit(req, diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "updated"})
-
 }
 
 func updateDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
-
 	err := akkeris.UpdateService(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return nil
-
 }
 
 func GetDiagnosticsList(req *http.Request, params martini.Params, r render.Render) {
