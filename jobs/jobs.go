@@ -61,12 +61,12 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var id string
 	inserterr := db.QueryRow(
-		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command,testpreviews) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) returning id;",
+		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command,testpreviews,ispreview) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) returning id;",
 		diagnosticspec.ID, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
 		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews,
+		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews, diagnosticspec.IsPreview,
 	).Scan(&id)
 	if inserterr != nil {
 		return inserterr
