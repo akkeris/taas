@@ -27,24 +27,25 @@ A diagnostic is a test that can be run against Akkeris apps. There are only two 
 
 Creates a diagnostic. The diagnostic will be created in the given space and with the given name, and act upon the given app. Note that the job, jobspace, app, space, org, action, and result cannot be changed later. Use the prefix `akkeris://` to use the current image of an Akkeris app.
 
-| Name           | Type             | Description                                                                   | Example                                            |
-|----------------|------------------|-------------------------------------------------------------------------------|----------------------------------------------------|
-| job            | required string  | The name of the diagnostic                                                    | ui-tests                                           |
-| jobspace       | required string  | The name of the space where the diagnostic should live                        | taas                                               |
-| app            | required string  | The name of the app that the diagnostic will target                           | appkitui                                           |
-| space          | required string  | The name of the space where the targeted app lives                            | default                                            |
-| action         | required string  | The app lifecycle action that the diagnostic will listen for                  | release                                            |
-| result         | required string  | The result of the action that will trigger the diagnostic                     | succeeded                                          |
-| image          | required string  | The Docker image to run                                                       | akkeris://appkitui-default                         |
-| pipelinename   | required string  | The pipeline to promote the app in (set to manual for manual promotion)       | uipipeline                                         |
-| transitionfrom | required string  | The pipeline stage to transition from (set to manual for manual promotion)    | dev                                                |
-| transitionto   | required string  | The pipeline stage to transition to (set to manual for manual promotion)      | qa                                                 |
-| timeout        | required integer | The amount of time in seconds before the diagnostic is marked as failed       | 180                                                |
-| startdelay     | required integer | The amount of time in seconds that the diagnostic will wait before running    | 60                                                 |
-| slackchannel   | required string  | The Slack channel to notify with test results                                 | taas_tests                                         |
-| command   	   | optional string  | Override the Docker image command                                             | ./start.sh   		                                   |
-| org          	 | optional string  | The name of the org for attribution (currently unused)                        | taas                                               |
-| env            | optional array   | An array of name/value objects to add as environment variables                | [ { "name": "FOO", "value": "BAR" } ]              |
+| Name           | Type             | Description                                                                       | Example                                            |
+|----------------|------------------|-----------------------------------------------------------------------------------|----------------------------------------------------|
+| job            | required string  | The name of the diagnostic                                                        | ui-tests                                           |
+| jobspace       | required string  | The name of the space where the diagnostic should live                            | taas                                               |
+| app            | required string  | The name of the app that the diagnostic will target                               | appkitui                                           |
+| space          | required string  | The name of the space where the targeted app lives                                | default                                            |
+| action         | required string  | The app lifecycle action that the diagnostic will listen for                      | release                                            |
+| result         | required string  | The result of the action that will trigger the diagnostic                         | succeeded                                          |
+| image          | required string  | The Docker image to run                                                           | akkeris://appkitui-default                         |
+| pipelinename   | required string  | The pipeline to promote the app in (set to manual for manual promotion)           | uipipeline                                         |
+| transitionfrom | required string  | The pipeline stage to transition from (set to manual for manual promotion)        | dev                                                |
+| transitionto   | required string  | The pipeline stage to transition to (set to manual for manual promotion)          | qa                                                 |
+| timeout        | required integer | The amount of time in seconds before the diagnostic is marked as failed           | 180                                                |
+| startdelay     | required integer | The amount of time in seconds that the diagnostic will wait before running        | 60                                                 |
+| slackchannel   | required string  | The Slack channel to notify with test results                                     | taas_tests                                         |
+| command   	   | optional string  | Override the Docker image command                                                 | ./start.sh   		                                   |
+| testpreviews   | optional boolean | Create additional diagnostics when a preview app is created for the targeted app  | true	                                             |
+| org          	 | optional string  | The name of the org for attribution (currently unused)                            | taas                                               |
+| env            | optional array   | An array of name/value objects to add as environment variables                    | [ { "name": "FOO", "value": "BAR" } ]              |
 
 **CURL Example**
 
@@ -67,6 +68,7 @@ curl \
     "startdelay": 10,
     "slackchannel": "taas_runs",
     "command": "./start.sh",
+    "testpreviews": true,
     "org": "akkeris",
     "env": [
       {
@@ -132,7 +134,9 @@ curl \
     "env": null,
     "runid": "5a5f8cc9-b931-4725-48e8-8ab52dd76d65",
     "overallstatus": "",
-    "command": "./start.sh"
+    "command": "./start.sh",
+    "testpreviews": true,
+    "ispreview": false
   }
 ]
 ```
@@ -177,7 +181,9 @@ curl \
   "env": null,
   "runid": "5a5f8cc9-b931-4725-48e8-8ab52dd76d65",
   "overallstatus": "",
-  "command": "./start.sh"
+  "command": "./start.sh",
+  "testpreviews": true,
+  "ispreview": false
 }
 ```
 
@@ -187,18 +193,19 @@ curl \
 
 Update one or more properties of a specific diagnostic. Properties not included in the JSON body will be unset. Use the prefix `akkeris://` to use the current image of an Akkeris app.
 
-| Name               | Type             | Description                                                                   | Example                                            |
-|--------------------|------------------|-------------------------------------------------------------------------------|----------------------------------------------------|
-| job                | required string  | The name of the job to update                                                 | ui-tests                                           |
-| jobspace           | required string  | The name of the jobspace of the job to update                                 | taas                                               |
-| image              | optional string  | The Docker image to run                                                       | akkeris://appkitui-default                         |
-| pipelinename       | optional string  | The pipeline to promote the app in (set to manual for manual promotion)       | ui-pipeline                                        |
-| transitionfrom     | optional string  | The pipeline stage to transition from (set to manual for manual promotion)    | dev                                                |
-| transitionto       | optional string  | The pipeline stage to transition to (set to manual for manual promotion)      | qa                                                 |
-| timeout            | optional integer | The amount of time in seconds before the diagnostic is marked as failed       | 180                                                |
-| startdelay         | optional integer | The amount of time in seconds that the diagnostic will wait before running    | 60                                                 |
-| slackchannel       | optional string  | The Slack channel to notify with test results                                 | taas_tests                                         |
-| command   	       | optional string  | Override the Docker image command                                             | ./start.sh   		                                   |
+| Name               | Type             | Description                                                                       | Example                                            |
+|--------------------|------------------|-----------------------------------------------------------------------------------|----------------------------------------------------|
+| job                | required string  | The name of the job to update                                                     | ui-tests                                           |
+| jobspace           | required string  | The name of the jobspace of the job to update                                     | taas                                               |
+| image              | optional string  | The Docker image to run                                                           | akkeris://appkitui-default                         |
+| pipelinename       | optional string  | The pipeline to promote the app in (set to manual for manual promotion)           | ui-pipeline                                        |
+| transitionfrom     | optional string  | The pipeline stage to transition from (set to manual for manual promotion)        | dev                                                |
+| transitionto       | optional string  | The pipeline stage to transition to (set to manual for manual promotion)          | qa                                                 |
+| timeout            | optional integer | The amount of time in seconds before the diagnostic is marked as failed           | 180                                                |
+| startdelay         | optional integer | The amount of time in seconds that the diagnostic will wait before running        | 60                                                 |
+| slackchannel       | optional string  | The Slack channel to notify with test results                                     | taas_tests                                         |
+| command   	       | optional string  | Override the Docker image command                                                 | ./start.sh   		                                   |
+| testpreviews       | optional boolean | Create additional diagnostics when a preview app is created for the targeted app  | true	                                             |
 
 **CURL Example**
 

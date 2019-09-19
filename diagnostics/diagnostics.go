@@ -106,7 +106,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 	// Allow users to set `PREVIEW_URL_VAR` to the name of the config var that they want
 	// us to inject the URL of the preview app into
-	if diagnostic.Action == "preview-released" {
+	if diagnostic.IsPreview {
 		// Find the PREVIEW_URL_VAR to replace
 		for _, element := range fetched {
 			if element.Name == "PREVIEW_URL_VAR" {
@@ -312,7 +312,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 	// Set the value of the config var targeted by `PREVIEW_URL_VAR`
 	// back to the original value
-	if diagnostic.Action == "preview-released" {
+	if diagnostic.IsPreview {
 		var newVar structs.Varspec
 		newVar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
 		newVar.Varname = injectvarname
