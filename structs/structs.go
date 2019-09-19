@@ -132,7 +132,7 @@ type DiagnosticSpec struct {
 	RunID          string                `json:"runid"`
 	OverallStatus  string                `json:"overallstatus"`
 	Command        string                `json:"command"`
-	TestPreviews   bool                  `json:"testpreviews,omitempty"` // Run diagnostic on preview apps
+	TestPreviews   bool                  `json:"testpreviews"` // Run diagnostic on preview apps
 }
 
 type DiagnosticSpecAudit struct {

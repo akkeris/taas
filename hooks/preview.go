@@ -54,7 +54,17 @@ func PreviewCreatedHook(previewcreatedhookpayload structs.PreviewCreatedHookSpec
 	fmt.Println("Starting to create diagnostic...")
 
 	diagnostic, err := dbstore.FindDiagnosticByApp(previewcreatedhookpayload.App.Name + "-" + previewcreatedhookpayload.Space.Name)
-	if err != nil {
+	if err != nil || diagnostic.ID == "" {
+		fmt.Println(err)
+		fmt.Println("Diagnostic not found for provided app. Ignoring preview-created hook.")
+		return
+	}
+
+	d, err := dbstore.FindDiagnostic(previewcreatedhookpayload.Preview.App.Name + "-" + diagnostic.Job)
+	if err == nil && d.ID != "" {
+		fmt.Println("A diagnostic with the given name and space already exists. Ignoring preview-created hook.")
+		return
+	} else if err != nil {
 		fmt.Println(err)
 		return
 	}

@@ -360,7 +360,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,'') from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,''), coalesce(testpreviews,null,false) from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -380,11 +380,12 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 	var dstartdelay int
 	var dslackchannel string
 	var dcommand string
+	var dtestpreviews bool
 
 	defer stmt.Close()
 	rows, err := stmt.Query(space, app, action, result)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -405,6 +406,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
 		diagnostic.Command = dcommand
+		diagnostic.TestPreviews = dtestpreviews
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -472,12 +474,22 @@ func DeleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 }
 
 func CreateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
-
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 		return
 	}
+
+	d, err := dbstore.FindDiagnostic(diagnosticspec.Job + "-" + diagnosticspec.JobSpace)
+	if err == nil && d.ID != "" {
+		r.Text(400, "A diagnostic with the given name and space already exists.")
+		return
+	} else if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+
 	isvalidspace, err := akkeris.IsValidSpace(diagnosticspec.JobSpace)
 	if err != nil {
 		fmt.Println(err)
@@ -603,7 +615,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics order by app, space")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false) from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -624,11 +636,12 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 	var dstartdelay int
 	var dslackchannel string
 	var dcommand string
+	var dtestpreviews bool
 
 	defer stmt.Close()
 	rows, err := stmt.Query()
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -649,6 +662,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
 		diagnostic.Command = dcommand
+		diagnostic.TestPreviews = dtestpreviews
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)

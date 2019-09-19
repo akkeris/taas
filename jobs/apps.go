@@ -172,7 +172,6 @@ func GetHooks(app string) (h []structs.AppHook, e error) {
 		return nil, err
 	}
 
-	fmt.Println(string(bb))
 	var hooks []structs.AppHook
 	err = json.Unmarshal(bb, &hooks)
 	if err != nil {
