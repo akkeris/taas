@@ -165,7 +165,27 @@ func isUUID(uuid string) bool {
 	return r.MatchString(uuid)
 }
 
+func FindPreviewParentDiagnostic(app string) (d structs.DiagnosticSpec, e error) {
+	var selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where app||'-'||space = $1 and testpreviews = true"
+	return findDiagnostic(app, selectstring)
+}
+
+func FindDiagnosticByApp(app string) (d structs.DiagnosticSpec, e error) {
+	var selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where app||'-'||space = $1"
+	return findDiagnostic(app, selectstring)
+}
+
 func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
+	var selectstring string
+	if !isUUID(provided) {
+		selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where job||'-'||jobspace = $1"
+	} else {
+		selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where id = $1"
+	}
+	return findDiagnostic(provided, selectstring)
+}
+
+func findDiagnostic(input string, selectstring string) (d structs.DiagnosticSpec, e error) {
 	var diagnostic structs.DiagnosticSpec
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
@@ -174,17 +194,13 @@ func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
 		return diagnostic, dberr
 	}
 	defer db.Close()
-	var selectstring string
-	if !isUUID(provided) {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where job||'-'||jobspace = $1"
-	} else {
-		selectstring = "select id,  space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics where id = $1"
-	}
+
 	stmt, err := db.Prepare(selectstring)
 	if err != nil {
 		fmt.Println(err)
 		return diagnostic, err
 	}
+
 	var did string
 	var dspace string
 	var dapp string
@@ -200,11 +216,13 @@ func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
 	var dstartdelay int
 	var dslackchannel string
 	var dcommand string
+	var dtestpreviews bool
+	var dispreview bool
 
 	defer stmt.Close()
-	rows, err := stmt.Query(provided)
+	rows, err := stmt.Query(input)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostic, err
@@ -224,6 +242,8 @@ func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
 		diagnostic.Command = dcommand
+		diagnostic.TestPreviews = dtestpreviews
+		diagnostic.IsPreview = dispreview
 		//runiduuid, _ := uuid.NewV4()
 		//runid := runiduuid.String()
 		//fmt.Println(runid)

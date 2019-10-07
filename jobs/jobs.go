@@ -18,7 +18,6 @@ import (
 )
 
 func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
-        
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -26,7 +25,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	defer db.Close()
 	fmt.Println(diagnosticspec.Slackchannel)
-	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8 where job=$9 and jobspace=$10")
+	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8,testpreviews=$9 where job=$10 and jobspace=$11")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -34,7 +33,8 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	res, err := stmt.Exec(
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.Job,diagnosticspec.JobSpace,
+		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews,
+		diagnosticspec.Job, diagnosticspec.JobSpace,
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -51,8 +51,6 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 }
 
 func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
-
-
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -63,12 +61,12 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var id string
 	inserterr := db.QueryRow(
-		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning id;",
+		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command,testpreviews,ispreview) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) returning id;",
 		diagnosticspec.ID, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
 		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
-		diagnosticspec.Slackchannel, diagnosticspec.Command,
+		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews, diagnosticspec.IsPreview,
 	).Scan(&id)
 	if inserterr != nil {
 		return inserterr
@@ -498,7 +496,7 @@ func CreateHooks(appspace string) (e error) {
 	}
 
 	if needsBuild {
-		err := createHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
+		err := CreateHook(true, []string{"build"}, svcurl+"/v1/buildhook", "merpderp", appspace)
 		if err != nil {
 			fmt.Println("Error creating build hook")
 			fmt.Println(err)
@@ -507,7 +505,7 @@ func CreateHooks(appspace string) (e error) {
 	}
 
 	if needsRelease {
-		err := createHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
+		err := CreateHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
 		if err != nil {
 			fmt.Println("Error creating release hook")
 			fmt.Println(err)
@@ -523,7 +521,54 @@ func CreateHooks(appspace string) (e error) {
 	return nil
 }
 
-func createHook(active bool, events []string, url string, secret string, app string) (e error) {
+func CreatePreviewHooks(appspace string) (e error) {
+	fmt.Println("Creating preview hooks...")
+	svcurl := os.Getenv("TAAS_SVC_URL")
+	var failedHooks []string
+
+	hooks, err := GetHooks(appspace)
+	if err != nil {
+		return err
+	}
+
+	needsReleased := true
+	needsCreated := true
+	for _, hook := range hooks {
+		if needsReleased {
+			needsReleased = !strings.Contains(hook.URL, svcurl+"/v1/previewreleasedhook")
+		}
+		if needsCreated {
+			needsCreated = !strings.Contains(hook.URL, svcurl+"/v1/previewcreatedhook")
+		}
+	}
+
+	if needsReleased {
+		err := CreateHook(true, []string{"preview-released"}, svcurl+"/v1/previewreleasedhook", "merpderp", appspace)
+		if err != nil {
+			fmt.Println("Error creating preview released hook")
+			fmt.Println(err)
+			failedHooks = append(failedHooks, "preview-released")
+		}
+	}
+
+	if needsCreated {
+		err := CreateHook(true, []string{"preview"}, svcurl+"/v1/previewcreatedhook", "merpderp", appspace)
+		if err != nil {
+			fmt.Println("Error creating preview created hook")
+			fmt.Println(err)
+			failedHooks = append(failedHooks, "preview")
+		}
+	}
+
+	if len(failedHooks) != 0 {
+		return errors.New("One or more hooks failed to create: " + strings.Join(failedHooks, ","))
+	}
+
+	fmt.Println("All preview hooks present!")
+	return nil
+}
+
+func CreateHook(active bool, events []string, url string, secret string, app string) (e error) {
 	var controllerurl = os.Getenv("APP_CONTROLLER_URL")
 
 	var hook structs.AppHook
@@ -554,5 +599,24 @@ func createHook(active bool, events []string, url string, secret string, app str
 		return err
 	}
 	fmt.Println(string(bodybytes))
+	return nil
+}
+
+func DeletePreviewHooks(appspace string) (e error) {
+	fmt.Println("Deleting preview hooks...")
+	svcurl := os.Getenv("TAAS_SVC_URL")
+
+	hooks, err := GetHooks(appspace)
+	if err != nil {
+		return err
+	}
+	for _, hook := range hooks {
+		if strings.Contains(hook.URL, svcurl+"/v1/previewreleasedhook") || strings.Contains(hook.URL, svcurl+"/v1/previewcreatedhook") {
+			err := DeleteHook(appspace, hook.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

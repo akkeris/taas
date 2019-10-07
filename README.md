@@ -11,6 +11,7 @@ Akkeris TaaS gives developers a place to host and run automated testing framewor
       - [Example](#Example)
     - [Get detailed information on your tests!](#Get-detailed-information-on-your-tests)
   - [Tips](#Tips)
+  - [Testing Preview Apps](#Testing-Preview-Apps)
   - [**Configure Akkeris TaaS**](#Configure-Akkeris-TaaS)
 
 ## API
@@ -73,6 +74,25 @@ These resources are all collected and sent to the Slack channel of your choosing
 | TAAS_RUNID                    | Current run ID. Use this as a prefix for file uploads (root directory to upload to)    |
 
 * A file called `describe.txt` is available as an artifact for every test run. It contains detailed information about the Kubernetes pod used to run the diagnostic - container status, time when image was successfully pulled, etc.
+
+## Testing Preview Apps
+
+You can also test [Akkeris preview apps](https://docs.akkeris.io/architecture/preview-apps.html)! 
+
+Setting the `testpreviews` property on a diagnostic will add hooks to the target app so that TaaS can create new diagnostics when a preview app is created (see the [API Reference](./docs/API-Reference.md)).
+
+Notes:
+
+* Diagnostics will only be created for future preview apps (not current ones)
+* The configuration of preview diagnostics can be edited just like normal diagnostics
+* Preview diagnostics will automatically be removed once the preview app is destroyed
+* Preview diagnostics will receive the same configuration and environment variables as the parent diagnostic
+* TaaS can inject the URL of the preview app into an environment variable. This is useful because each preview app has a dynamically generated name, which means unpredictable URLs.
+  * The special environment variable `PREVIEW_URL_VAR` should be set to the name of the environment variable that you wish to replace.
+  * Say you have an environment variable, `MY_ENV_VAR`, which contains the URL of your target app (`https://my-app.mydomain`):
+    1. In your parent diagnostic that has preview tests enabled, set `PREVIEW_URL_VAR` to the value `"MY_ENV_VAR"`
+    2. Create a new preview app, which will cause TaaS to create a preview diagnostic
+    3. When running the preview diagnostic, TaaS changes the value of `MY_ENV_VAR` to `http://<preview-app-name>.<preview-app-space>.svc.cluster.local`
 
 
 ## **Configure Akkeris TaaS**

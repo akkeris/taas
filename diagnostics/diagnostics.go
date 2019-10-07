@@ -1,9 +1,8 @@
 package diagnostics
 
 import (
+	"bufio"
 	"bytes"
-        "bufio"
-        "text/template"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	artifacts "taas/artifacts"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	githubapi "taas/githubapi"
@@ -20,8 +20,8 @@ import (
 	jobs "taas/jobs"
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
-        artifacts "taas/artifacts"
 	structs "taas/structs"
+	"text/template"
 	"time"
 
 	"github.com/go-martini/martini"
@@ -100,6 +100,32 @@ func check(diagnostic structs.DiagnosticSpec) {
 		fmt.Println(err)
 	}
 	oneoff.Env = fetched
+
+	var injectvarname string
+	var injectvarvalue string
+
+	// Allow users to set `PREVIEW_URL_VAR` to the name of the config var that they want
+	// us to inject the URL of the preview app into
+	if diagnostic.IsPreview {
+		// Find the PREVIEW_URL_VAR to replace
+		for _, element := range fetched {
+			if element.Name == "PREVIEW_URL_VAR" {
+				injectvarname = element.Value
+				break
+			}
+		}
+		// Replace the target config var with the URL of the preview app
+		for _, element := range fetched {
+			if element.Name == injectvarname {
+				injectvarvalue = element.Value
+				var newVar structs.Varspec
+				newVar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+				newVar.Varname = injectvarname
+				newVar.Varvalue = "http://" + diagnostic.App + "." + diagnostic.Space + ".svc.cluster.local"
+				akkeris.UpdateVar(newVar)
+			}
+		}
+	}
 
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	time.Sleep(time.Second * 5)
@@ -183,12 +209,12 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
-                if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
-                        fmt.Println("JOB FAILED")
-                        overallstatus = "failed"
-                        endtime = time.Now().UTC()
-                        break
-                }
+		if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
+			fmt.Println("JOB FAILED")
+			overallstatus = "failed"
+			endtime = time.Now().UTC()
+			break
+		}
 	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
@@ -199,10 +225,10 @@ func check(diagnostic structs.DiagnosticSpec) {
 	var loglines structs.LogLines
 	loglines.Logs = logs
 	diagnosticlogs.WriteLogES(diagnostic, loglines)
-        _, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
-        if err != nil {
-                fmt.Println(err)
-        }
+	_, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
+	if err != nil {
+		fmt.Println(err)
+	}
 	err = dbstore.StoreRun(diagnostic)
 	if err != nil {
 		fmt.Println(err)
@@ -283,6 +309,17 @@ func check(diagnostic structs.DiagnosticSpec) {
 		}
 		fmt.Println(promotestatus)
 	}
+
+	// Set the value of the config var targeted by `PREVIEW_URL_VAR`
+	// back to the original value
+	if diagnostic.IsPreview {
+		var newVar structs.Varspec
+		newVar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+		newVar.Varname = injectvarname
+		newVar.Varvalue = injectvarvalue
+		akkeris.UpdateVar(newVar)
+	}
+
 	notifications.PostToSlack(diagnostic, overallstatus, promotestatus)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
@@ -323,7 +360,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,'') from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -343,11 +380,13 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 	var dstartdelay int
 	var dslackchannel string
 	var dcommand string
+	var dtestpreviews bool
+	var dispreview bool
 
 	defer stmt.Close()
 	rows, err := stmt.Query(space, app, action, result)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -368,6 +407,8 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
 		diagnostic.Command = dcommand
+		diagnostic.TestPreviews = dtestpreviews
+		diagnostic.IsPreview = dispreview
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -381,7 +422,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 
 }
 
-func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
+func HTTPDeleteDiagnostic(req *http.Request, params martini.Params, r render.Render) {
 	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		fmt.Println(err)
@@ -393,7 +434,7 @@ func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render)
 		return
 	}
 
-	err = deleteDiagnostic(diagnostic)
+	err = DeleteDiagnostic(diagnostic)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
@@ -405,7 +446,7 @@ func DeleteDiagnostic(req *http.Request, params martini.Params, r render.Render)
 
 }
 
-func deleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
+func DeleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 
 	err := akkeris.DeleteService(diagnostic)
 	if err != nil {
@@ -435,12 +476,22 @@ func deleteDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 }
 
 func CreateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, berr binding.Errors, r render.Render) {
-
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 		return
 	}
+
+	d, err := dbstore.FindDiagnostic(diagnosticspec.Job + "-" + diagnosticspec.JobSpace)
+	if err == nil && d.ID != "" {
+		r.Text(400, "A diagnostic with the given name and space already exists.")
+		return
+	} else if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+
 	isvalidspace, err := akkeris.IsValidSpace(diagnosticspec.JobSpace)
 	if err != nil {
 		fmt.Println(err)
@@ -496,6 +547,15 @@ func createDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
+	// Add hooks to run diagnostic on preview apps if the "TestPreviews" property is true
+	if diagnosticspec.TestPreviews {
+		err = akkeris.CreatePreviewHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -504,26 +564,36 @@ func UpdateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, 
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
 	}
+
 	err := updateDiagnostic(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
 		return
-
 	}
+
+	if diagnosticspec.TestPreviews {
+		err = akkeris.CreatePreviewHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else if diagnosticspec.TestPreviews {
+		err = akkeris.DeletePreviewHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	dbstore.AddDiagnosticUpdateAudit(req, diagnosticspec)
 	r.JSON(200, map[string]interface{}{"status": "updated"})
-
 }
 
 func updateDiagnostic(diagnosticspec structs.DiagnosticSpec) (e error) {
-
 	err := akkeris.UpdateService(diagnosticspec)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return nil
-
 }
 
 func GetDiagnosticsList(req *http.Request, params martini.Params, r render.Render) {
@@ -547,7 +617,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,'') from diagnostics order by app, space")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -568,11 +638,13 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 	var dstartdelay int
 	var dslackchannel string
 	var dcommand string
+	var dtestpreviews bool
+	var dispreview bool
 
 	defer stmt.Close()
 	rows, err := stmt.Query()
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -593,6 +665,8 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		diagnostic.Startdelay = dstartdelay
 		diagnostic.Slackchannel = dslackchannel
 		diagnostic.Command = dcommand
+		diagnostic.TestPreviews = dtestpreviews
+		diagnostic.IsPreview = dispreview
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -951,23 +1025,23 @@ func CreateHooks(params martini.Params, r render.Render) {
 	r.JSON(200, map[string]interface{}{"status": "hooks added"})
 }
 
-func describePodAndUploadToS3(space string, name string, runid string) (p structs.TemplatePod, e error){
-     var templatepod structs.TemplatePod
-     object, err := akkeris.DescribePod(space, name)
-     if err != nil {
-                fmt.Println(err)
-                return templatepod, err
-     }
-     templatepod.Name=object.Metadata.Name
-     templatepod.Space=object.Metadata.Namespace
-     templatepod.Node = object.Spec.NodeName
-     templatepod.StartTime = object.Status.StartTime
-     templatepod.Status = object.Status.Phase
-     templatepod.Containers = object.Spec.Containers
-     templatepod.Conditions = object.Status.Conditions
-     templatepod.Events = object.Events.Items
+func describePodAndUploadToS3(space string, name string, runid string) (p structs.TemplatePod, e error) {
+	var templatepod structs.TemplatePod
+	object, err := akkeris.DescribePod(space, name)
+	if err != nil {
+		fmt.Println(err)
+		return templatepod, err
+	}
+	templatepod.Name = object.Metadata.Name
+	templatepod.Space = object.Metadata.Namespace
+	templatepod.Node = object.Spec.NodeName
+	templatepod.StartTime = object.Status.StartTime
+	templatepod.Status = object.Status.Phase
+	templatepod.Containers = object.Spec.Containers
+	templatepod.Conditions = object.Status.Conditions
+	templatepod.Events = object.Events.Items
 
-describetemplate:=`
+	describetemplate := `
 Name:               {{ .Name }}
 Namespace:          {{ .Space }}
 Node:               {{ .Node }}
@@ -995,15 +1069,14 @@ Events:
   Message: {{ .Message }}
 {{end}}
 `
-var t *template.Template
-t = template.Must(template.New("desribe").Parse(describetemplate))
-var b bytes.Buffer
-wr := bufio.NewWriter(&b)
-err = t.Execute(wr, templatepod)
-fmt.Println(err)
-wr.Flush()
+	var t *template.Template
+	t = template.Must(template.New("desribe").Parse(describetemplate))
+	var b bytes.Buffer
+	wr := bufio.NewWriter(&b)
+	err = t.Execute(wr, templatepod)
+	fmt.Println(err)
+	wr.Flush()
 
-artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)
-return templatepod, nil
+	artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)
+	return templatepod, nil
 }
-

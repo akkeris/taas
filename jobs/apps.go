@@ -172,7 +172,6 @@ func GetHooks(app string) (h []structs.AppHook, e error) {
 		return nil, err
 	}
 
-	fmt.Println(string(bb))
 	var hooks []structs.AppHook
 	err = json.Unmarshal(bb, &hooks)
 	if err != nil {
@@ -180,4 +179,27 @@ func GetHooks(app string) (h []structs.AppHook, e error) {
 		return nil, err
 	}
 	return hooks, nil
+}
+
+func DeleteHook(app string, hookid string) (e error) {
+	req, err := http.NewRequest("DELETE", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+"app"+"/hooks/"+hookid, nil)
+	req.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(string(bodybytes))
+	return nil
 }

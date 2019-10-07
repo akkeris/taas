@@ -16,8 +16,6 @@ import (
 
 func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e error) {
 	var envvars []structs.EnvironmentVariable
-	fmt.Println(job)
-	fmt.Println(jobspace)
 
 	req, err := http.NewRequest("GET", os.Getenv("AKKERIS_API_URL")+"/v1/config/set/"+job+"-"+jobspace+"-cs", nil)
 	if err != nil {
@@ -36,17 +34,15 @@ func GetVars(job string, jobspace string) (v []structs.EnvironmentVariable, e er
 		fmt.Println(err)
 		return envvars, err
 	}
-	fmt.Println(string(bodybytes))
+
 	var configset structs.ConfigSpec
 	err = json.Unmarshal(bodybytes, &configset)
 	if err != nil {
 		fmt.Println(err)
 		return envvars, err
 	}
-	fmt.Println(configset)
+
 	for _, element := range configset {
-		fmt.Println(element.Varname)
-		fmt.Println(element.Varvalue)
 		var envvar structs.EnvironmentVariable
 		envvar.Name = element.Varname
 		envvar.Value = element.Varvalue
@@ -95,16 +91,13 @@ func getSecretVars(job string, jobspace string) (v []structs.EnvironmentVariable
 	db.Close()
 
 	for _, secret := range secrets {
-		fmt.Println(secret)
 		vars, err := getSecret(secret)
 		if err != nil {
 			fmt.Println(err)
 			return envvars, err
 		}
-		fmt.Println(vars)
 		envvars = append(envvars, vars...)
 	}
-	fmt.Println(envvars)
 	return envvars, nil
 }
 
@@ -124,13 +117,11 @@ func getSecret(secret string) (v []structs.EnvironmentVariable, e error) {
 	}
 	defer resp.Body.Close()
 	bodybytes, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(bodybytes))
 	err = json.Unmarshal(bodybytes, &secretvars)
 	if err != nil {
 		fmt.Println(err)
 		return envvars, err
 	}
-	fmt.Println(envvars)
 	for _, element := range secretvars {
 		var envvar structs.EnvironmentVariable
 		envvar.Name = element.Key

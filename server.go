@@ -22,7 +22,7 @@ import (
 
 func checkEnv() {
 	var c int
-	var requiredEnv = []string{"AKKERIS_API_URL", "APP_CONTROLLER_AUTH_SECRET", "APP_CONTROLLER_URL", "DEFAULT_ORG", "DEFAULT_START_DELAY", "DIAGNOSTICDB", "ENABLE_SLACK_NOTIFICATIONS", "ES_URL", "GITHUB_TOKEN_SECRET", "KIBANA_URL", "KUBERNETES_API_SERVER", "KUBERNETES_API_VERSION", "KUBERNETES_CLIENT_TYPE", "KUBERNETES_TOKEN_SECRET", "LOG_URL", "PITDB", "PORT", "POSTBACKURL", "RERUN_URL", "SLACK_NOTIFICATION_CHANNEL", "SLACK_NOTIFICATION_URL", "VAULT_ADDR", "VAULT_TOKEN", "AWS_S3_BUCKET", "AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "DIRECTORY_LISTINGS", "STRIP_PATH", "DIRECTORY_LISTINGS_FORMAT", "ARTIFACTS_URL", "LOG_TIMESTAMPS_LOCALE", "TAAS_SVC_URL","AUTH_HOST"}
+	var requiredEnv = []string{"AKKERIS_API_URL", "APP_CONTROLLER_AUTH_SECRET", "APP_CONTROLLER_URL", "DEFAULT_ORG", "DEFAULT_START_DELAY", "DIAGNOSTICDB", "ENABLE_SLACK_NOTIFICATIONS", "ES_URL", "GITHUB_TOKEN_SECRET", "KIBANA_URL", "KUBERNETES_API_SERVER", "KUBERNETES_API_VERSION", "KUBERNETES_CLIENT_TYPE", "KUBERNETES_TOKEN_SECRET", "LOG_URL", "PITDB", "PORT", "POSTBACKURL", "RERUN_URL", "SLACK_NOTIFICATION_CHANNEL", "SLACK_NOTIFICATION_URL", "VAULT_ADDR", "VAULT_TOKEN", "AWS_S3_BUCKET", "AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "DIRECTORY_LISTINGS", "STRIP_PATH", "DIRECTORY_LISTINGS_FORMAT", "ARTIFACTS_URL", "LOG_TIMESTAMPS_LOCALE", "TAAS_SVC_URL", "AUTH_HOST"}
 
 	for _, env := range requiredEnv {
 		_, set := os.LookupEnv(env)
@@ -83,7 +83,7 @@ func main() {
 	m.Get("/v1/diagnostics/runs/info/:runid", diagnosticlogs.GetRunInfo)
 	m.Get("/v1/diagnostic/rerun", diagnostics.Rerun)
 	m.Get("/v1/diagnostic/:provided", diagnostics.GetDiagnosticByNameOrID)
-	m.Delete("/v1/diagnostic/:provided", diagnostics.DeleteDiagnostic)
+	m.Delete("/v1/diagnostic/:provided", diagnostics.HTTPDeleteDiagnostic)
 	m.Post("/v1/diagnostic/:provided/bind/**", diagnostics.BindDiagnosticSecret)
 	m.Delete("/v1/diagnostic/:provided/bind/**", diagnostics.UnbindDiagnosticSecret)
 
@@ -99,7 +99,13 @@ func main() {
 	m.Post("/v1/diagnostic/:provided/hooks", diagnostics.CreateHooks)
 
 	m.Get("/v1/diagnostic/:provided/audits", dbstore.GetAudits)
-        m.Get("/v1/diagnostic/:provided/taillogs", diagnosticlogs.TailLogs)
+
+	m.Get("/v1/diagnostic/:provided/taillogs", diagnosticlogs.TailLogs)
+
+	m.Post("/v1/previewreleasedhook", binding.Json(structs.PreviewReleasedHookSpec{}), hooks.PreviewReleasedHook)
+	m.Post("/v1/previewcreatedhook", binding.Json(structs.PreviewCreatedHookSpec{}), hooks.PreviewCreatedHook)
+	m.Post("/v1/previewdestroyhook", binding.Json(structs.DestroyHookSpec{}), hooks.PreviewDestroyHook)
+
 	m.Use(martini.Static("static"))
 	m.Run()
 }
