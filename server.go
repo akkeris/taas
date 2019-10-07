@@ -100,6 +100,8 @@ func main() {
 
 	m.Get("/v1/diagnostic/:provided/audits", dbstore.GetAudits)
 
+	m.Get("/v1/diagnostic/:provided/taillogs", diagnosticlogs.TailLogs)
+
 	m.Post("/v1/previewreleasedhook", binding.Json(structs.PreviewReleasedHookSpec{}), hooks.PreviewReleasedHook)
 	m.Post("/v1/previewcreatedhook", binding.Json(structs.PreviewCreatedHookSpec{}), hooks.PreviewCreatedHook)
 	m.Post("/v1/previewdestroyhook", binding.Json(structs.DestroyHookSpec{}), hooks.PreviewDestroyHook)
