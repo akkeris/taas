@@ -129,16 +129,26 @@ func check(diagnostic structs.DiagnosticSpec) {
 
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	time.Sleep(time.Second * 5)
-	akkeris.Startpod(oneoff)
-
+	resp, err := akkeris.Startpod(oneoff)
+        starttime := time.Now().UTC()
+        endtime := time.Now().UTC()
+        var instance string
+        var overallstatus string
+        overallstatus = "timedout"
+        var loglines structs.LogLines
+        var i float64
+        fmt.Println(resp)
+        if err != nil {
+              fmt.Println("unable to start pod")
+              fmt.Println("JOB FAILED")
+              overallstatus = "failed"
+              endtime = time.Now().UTC()        
+              loglines.Logs = append(loglines.Logs, "Message: Unable to start tests")
+              loglines.Logs = append(loglines.Logs, "")
+              loglines.Logs = append(loglines.Logs, "Message: "+err.Error())
+        }else{
 	time.Sleep(time.Second * 3)
 
-	starttime := time.Now().UTC()
-	endtime := time.Now().UTC()
-	var instance string
-	var overallstatus string
-	overallstatus = "timedout"
-	var i float64
 	for i = 0.0; i < float64(diagnostic.Timeout); i += 0.333 {
 		time.Sleep(time.Millisecond * 333)
 		akkerisapiurl := os.Getenv("AKKERIS_API_URL")
@@ -182,6 +192,9 @@ func check(diagnostic structs.DiagnosticSpec) {
 			}
 			break
 		}
+                if len(status) == 0 {
+                        continue
+                }
 		instance = status[0].Instanceid
 		if status[0].Phase == "Succeeded/terminated" && status[0].Reason == "Completed" {
 			fmt.Println("JOB FINISHED OK")
@@ -215,15 +228,15 @@ func check(diagnostic structs.DiagnosticSpec) {
 			endtime = time.Now().UTC()
 			break
 		}
-	}
+       	  }
+        }
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
 	if err != nil {
 		fmt.Println(err)
 	}
 	diagnostic.OverallStatus = overallstatus
-	var loglines structs.LogLines
-	loglines.Logs = logs
+	loglines.Logs =append(loglines.Logs, logs...)
 	diagnosticlogs.WriteLogES(diagnostic, loglines)
 	_, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
 	if err != nil {
