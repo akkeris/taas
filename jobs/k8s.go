@@ -65,7 +65,7 @@ func DeleteKubeJob(space string, jobName string) (e error) {
 	return nil
 }
 
-func Startpod(oneoff structs.OneOffSpec) string {
+func Startpod(oneoff structs.OneOffSpec) (r string,e error) {
 	var oneoffpod structs.OneOffPod
 	oneoffpod.APIVersion = "v1"
 	oneoffpod.Kind = "Pod"
@@ -99,6 +99,7 @@ func Startpod(oneoff structs.OneOffSpec) string {
 	bodybytes, err := json.Marshal(oneoffpod)
 	if err != nil {
 		fmt.Println(err)
+                return "",err
 	}
 	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
 	kubernetesapiversion := os.Getenv("KUBERNETES_API_VERSION")
@@ -109,14 +110,21 @@ func Startpod(oneoff structs.OneOffSpec) string {
 
 	if doerr != nil {
 		fmt.Println(err)
+                return "",err
 	}
+        fmt.Println(resp.StatusCode)
+                 
 	defer resp.Body.Close()
 	bodybytes, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
+                return "",err
 	}
 	fmt.Println(string(bodybytes))
-	return string(bodybytes)
+        if resp.StatusCode != 201 {
+                return string(bodybytes), errors.New(string(bodybytes))
+        }
+	return string(bodybytes), nil
 }
 
 func Deletepod(spacename string, pod string) string {
