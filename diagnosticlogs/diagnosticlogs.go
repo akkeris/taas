@@ -2,29 +2,58 @@ package diagnosticlogs
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
-        dbstore "taas/dbstore"
+	dbstore "taas/dbstore"
 	structs "taas/structs"
 	"time"
-        uuid "github.com/nu7hatch/gouuid"
-        cluster "github.com/bsm/sarama-cluster"
+
+	sarama "github.com/Shopify/sarama"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
+	uuid "github.com/nu7hatch/gouuid"
 )
-type LogObject struct {
-        Log    string    `json:"log"`
-        Kubernetes struct {
-                ContainerName    string `json:"container_name"`
-                NamespaceName    string `json:"namespace_name"`
-                PodName          string `json:"pod_name"`
-        } `json:"kubernetes"`
-        Topic        string `json:"topic"`
+
+type logObject struct {
+	Log        string `json:"log"`
+	Kubernetes struct {
+		ContainerName string `json:"container_name"`
+		NamespaceName string `json:"namespace_name"`
+		PodName       string `json:"pod_name"`
+	} `json:"kubernetes"`
+	Topic string `json:"topic"`
+}
+
+type taasConsumerGroupHandler struct {
+	Writer   http.ResponseWriter
+	Flusher  http.Flusher
+	Job      string
+	JobSpace string
+}
+
+func (taasConsumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
+func (taasConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
+func (h taasConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for msg := range claim.Messages() {
+		var logobj logObject
+		err := json.Unmarshal(msg.Value, &logobj)
+		if err != nil {
+			fmt.Println(err)
+		} else if logobj.Kubernetes.ContainerName == h.Job && logobj.Kubernetes.NamespaceName == h.JobSpace {
+			event := logobj.Log
+			fmt.Fprintf(h.Writer, event)
+			h.Flusher.Flush()
+		}
+		sess.MarkMessage(msg, "")
+	}
+	return nil
 }
 
 func GetLogs(space string, job string, instance string) (l []string, e error) {
@@ -136,19 +165,19 @@ func GetLogsES(params martini.Params, r render.Render) {
 		return
 	}
 	var logtext string
-        zone, _ := time.LoadLocation(os.Getenv("LOG_TIMESTAMPS_LOCALE"))
+	zone, _ := time.LoadLocation(os.Getenv("LOG_TIMESTAMPS_LOCALE"))
 	for _, line := range logs.Source.Logs {
-                if line =="" {
-                  continue
-                }
-                mainpart:=strings.Split(strings.Split(line, " ")[0], ".")[0]
-                t, err := time.Parse("2006-01-02T15:04:05", mainpart)
-                if err != nil {
-                    fmt.Println(err)
-                }
-                tinzone:=t.In(zone)
-                tinzonestring := fmt.Sprintf("%s",tinzone.Format("2006-01-02 03:04:05 PM"))
-		logtext = logtext + "["+tinzonestring + "]  "+strings.Join(strings.Split(line," ")[1:]," ")+"\n"
+		if line == "" {
+			continue
+		}
+		mainpart := strings.Split(strings.Split(line, " ")[0], ".")[0]
+		t, err := time.Parse("2006-01-02T15:04:05", mainpart)
+		if err != nil {
+			fmt.Println(err)
+		}
+		tinzone := t.In(zone)
+		tinzonestring := fmt.Sprintf("%s", tinzone.Format("2006-01-02 03:04:05 PM"))
+		logtext = logtext + "[" + tinzonestring + "]  " + strings.Join(strings.Split(line, " ")[1:], " ") + "\n"
 	}
 
 	r.Text(200, logtext)
@@ -186,20 +215,20 @@ func GetLogsESObj(params martini.Params, r render.Render) {
 	}
 
 	var logtext string
-        zone, _ := time.LoadLocation(os.Getenv("LOG_TIMESTAMPS_LOCALE"))
+	zone, _ := time.LoadLocation(os.Getenv("LOG_TIMESTAMPS_LOCALE"))
 	var logobj []string
 	for _, line := range logs.Source.Logs {
-                if line =="" {
-                  continue
-                }
-                mainpart:=strings.Split(strings.Split(line, " ")[0], ".")[0]
-                t, err := time.Parse("2006-01-02T15:04:05", mainpart)
-                if err != nil {
-                    fmt.Println(err)
-                }
-                tinzone:=t.In(zone)
-                tinzonestring := fmt.Sprintf("%s",tinzone.Format("2006-01-02 03:04:05 PM"))
-		logobj = append(logobj, logtext + "["+tinzonestring + "]  "+strings.Join(strings.Split(line," ")[1:]," "))
+		if line == "" {
+			continue
+		}
+		mainpart := strings.Split(strings.Split(line, " ")[0], ".")[0]
+		t, err := time.Parse("2006-01-02T15:04:05", mainpart)
+		if err != nil {
+			fmt.Println(err)
+		}
+		tinzone := t.In(zone)
+		tinzonestring := fmt.Sprintf("%s", tinzone.Format("2006-01-02 03:04:05 PM"))
+		logobj = append(logobj, logtext+"["+tinzonestring+"]  "+strings.Join(strings.Split(line, " ")[1:], " "))
 	}
 
 	r.JSON(200, logobj)
@@ -356,62 +385,65 @@ func GetRunInfo(params martini.Params, r render.Render) {
 }
 
 func TailLogs(w http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
-        fmt.Println(params["provided"])
-        diagnostic, err := dbstore.FindDiagnostic(params["provided"])
-        if err != nil {
-                fmt.Println(err)
-                r.JSON(500, map[string]interface{}{"response": err})
-        }
-        if diagnostic.ID == "" {
-                r.JSON(500, map[string]interface{}{"response": "invalid test"})
-                return
-        }
-        f, ok := w.(http.Flusher)
-        if !ok {
-                http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-                return
-        }
-        jobspace := diagnostic.JobSpace
-        job := diagnostic.Job
-        topic := jobspace
-        cguuid, _ := uuid.NewV4()
-        consumergroup := cguuid.String()
+	fmt.Println(params["provided"])
+	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err})
+	}
+	if diagnostic.ID == "" {
+		r.JSON(500, map[string]interface{}{"response": "invalid test"})
+		return
+	}
+	f, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+	jobspace := diagnostic.JobSpace
+	job := diagnostic.Job
+	topic := jobspace
+	cguuid, _ := uuid.NewV4()
+	consumergroup := cguuid.String()
+	brokers := os.Getenv("KAFKA_BROKERS")
 
-        var consumer *cluster.Consumer
-        brokers := os.Getenv("KAFKA_BROKERS")
-        config := cluster.NewConfig()
-        config.Consumer.Return.Errors = true
-        config.Group.Return.Notifications = true
-        consumer, err = cluster.NewConsumer(strings.Split(brokers, ","), consumergroup, strings.Split(topic, ","), config)
-        if err != nil {
-                fmt.Println(err)
-        }
-        defer consumer.Close()
-        w.Header().Set("Content-Type", "text/event-stream")
-        w.Header().Set("Cache-Control", "no-cache")
-        w.Header().Set("Connection", "keep-alive")
-        w.Header().Set("Transfer-Encoding", "chunked")
-        for {
-                select {
-                case msg, more := <-consumer.Messages():
-                        if more {
-                                var log LogObject
-                                err = json.Unmarshal(msg.Value, &log)
-                                if log.Kubernetes.ContainerName == job && log.Kubernetes.NamespaceName == jobspace {
-                                        event := log.Log
-                                        fmt.Fprintf(w, event)
-                                        f.Flush()
-                                }
-                                consumer.MarkOffset(msg, "")
-                        }
-                case err, more := <-consumer.Errors():
-                        if more {
-                                fmt.Printf("Error: %s\n", err.Error())
-                        }
-                case ntf, more := <-consumer.Notifications():
-                        if more {
-                                fmt.Printf("Rebalanced: %+v\n", ntf)
-                        }
-                }
-        }
+	// New Sarama configuration
+	config := sarama.NewConfig()
+	version, err := sarama.ParseKafkaVersion("2.0.0")
+	config.Version = version
+	config.Consumer.Return.Errors = true
+	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+
+	client, err := sarama.NewClient(strings.Split(brokers, ","), config)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Start new consumer group
+	group, err := sarama.NewConsumerGroupFromClient(consumergroup, client)
+	if err != nil {
+		log.Println(err)
+	}
+	defer func() { _ = group.Close() }()
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Transfer-Encoding", "chunked")
+
+	// Iterate over consumer sessions
+	ctx := context.Background()
+	for {
+		topics := []string{topic}
+		handler := &taasConsumerGroupHandler{}
+		handler.Writer = w
+		handler.Flusher = f
+		handler.Job = job
+		handler.JobSpace = jobspace
+		err := group.Consume(ctx, topics, handler)
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }

@@ -6,13 +6,14 @@ import (
 	diagnostics "taas/diagnostics"
 	githubapi "taas/githubapi"
 	structs "taas/structs"
-
+        "net/http"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 )
 
-func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors, r render.Render) {
+
+func ReleaseHook(req *http.Request, releasehookpayload structs.ReleaseHookSpec, berr binding.Errors, r render.Render) {
 	if berr != nil {
 		fmt.Println("Bad Request")
 		fmt.Println(berr)
@@ -27,7 +28,9 @@ func ReleaseHook(releasehookpayload structs.ReleaseHookSpec, berr binding.Errors
 		fmt.Println(err)
 	}
 	for _, element := range diagnosticslist {
+                element.ReleaseID = releasehookpayload.Release.ID
 		element.BuildID = releasehookpayload.Build.ID
+                element.Token = req.Header.Get("x-akkeris-token")
 		version, err := akkeris.GetVersion(element.App, element.Space, element.BuildID)
 		if err != nil {
 			fmt.Println(err)

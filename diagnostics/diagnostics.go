@@ -76,8 +76,136 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	return nil
 }
 
-func check(diagnostic structs.DiagnosticSpec) {
+func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
+	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", nil)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Content-type", "application/json")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(bodybytes))
 
+	var statuses structs.Statuses
+	var statusid string
+	err = json.Unmarshal(bodybytes, &statuses)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	for _, status := range statuses.Statuses {
+		fmt.Println(status.ID)
+		if status.Context == "taas/"+diagnostic.Job+"-"+diagnostic.JobSpace {
+			statusid = status.ID
+		}
+	}
+	return statusid, nil
+}
+
+func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, diagnostic structs.DiagnosticSpec, loglink string) (e error) {
+	p, err := json.Marshal(releasestatus)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
+	req, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Content-type", "application/json")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(bodybytes))
+	return nil
+}
+
+func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.DiagnosticSpec, loglink string) (e error) {
+	p, err := json.Marshal(releasestatus)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
+	req, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Content-type", "application/json")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+	bodybytes, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(bodybytes))
+	return nil
+}
+
+func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink string) {
+	var releasestatus structs.ReleaseStatus
+	releasestatus.Name = "TaaS Tests"
+	if status == "success" {
+		releasestatus.State = "success"
+		releasestatus.Description = "Tests Passed!"
+		releasestatus.TargetURL = loglink
+		releasestatus.ImageURL = os.Getenv("ARTIFACTS_URL") + "/success.png"
+		statusid, err := getStatusCheck(diagnostic)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("Updating status: " + statusid)
+		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
+	}
+	if status == "pending" {
+		releasestatus.State = "pending"
+		releasestatus.Description = "Tests are still running"
+		releasestatus.Context = "taas/" + diagnostic.Job + "-" + diagnostic.JobSpace
+		createStatusCheck(releasestatus, diagnostic, loglink)
+		statusid, err := getStatusCheck(diagnostic)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("Updating status: " + statusid)
+		releasestatus.Context = ""
+		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
+	}
+	if status == "timedout" {
+		releasestatus.State = "failure"
+		releasestatus.Description = "Tests Timed Out"
+		releasestatus.TargetURL = loglink
+		releasestatus.ImageURL = os.Getenv("ARTIFACTS_URL") + "/fail.png"
+		statusid, err := getStatusCheck(diagnostic)
+		if err != nil {
+			fmt.Println(err)
+		}
+		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
+	}
+	if status == "failed" {
+		releasestatus.State = "failure"
+		releasestatus.Description = "Tests Failed"
+		releasestatus.TargetURL = loglink
+		releasestatus.ImageURL = os.Getenv("ARTIFACTS_URL") + "/fail.png"
+		statusid, err := getStatusCheck(diagnostic)
+		if err != nil {
+			fmt.Println(err)
+		}
+		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
+	}
+}
+
+func check(diagnostic structs.DiagnosticSpec) {
+	if os.Getenv("STATUS_CHECKS") == "true" {
+		setStatusCheck("pending", diagnostic, "")
+	}
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
@@ -130,113 +258,113 @@ func check(diagnostic structs.DiagnosticSpec) {
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	time.Sleep(time.Second * 5)
 	resp, err := akkeris.Startpod(oneoff)
-        starttime := time.Now().UTC()
-        endtime := time.Now().UTC()
-        var instance string
-        var overallstatus string
-        overallstatus = "timedout"
-        var loglines structs.LogLines
-        var i float64
-        fmt.Println(resp)
-        if err != nil {
-              fmt.Println("unable to start pod")
-              fmt.Println("JOB FAILED")
-              overallstatus = "failed"
-              endtime = time.Now().UTC()        
-              loglines.Logs = append(loglines.Logs, "Message: Unable to start tests")
-              loglines.Logs = append(loglines.Logs, "")
-              loglines.Logs = append(loglines.Logs, "Message: "+err.Error())
-        }else{
-	time.Sleep(time.Second * 3)
+	starttime := time.Now().UTC()
+	endtime := time.Now().UTC()
+	var instance string
+	var overallstatus string
+	overallstatus = "timedout"
+	var loglines structs.LogLines
+	var i float64
+	fmt.Println(resp)
+	if err != nil {
+		fmt.Println("unable to start pod")
+		fmt.Println("JOB FAILED")
+		overallstatus = "failed"
+		endtime = time.Now().UTC()
+		loglines.Logs = append(loglines.Logs, "Message: Unable to start tests")
+		loglines.Logs = append(loglines.Logs, "")
+		loglines.Logs = append(loglines.Logs, "Message: "+err.Error())
+	} else {
+		time.Sleep(time.Second * 3)
 
-	for i = 0.0; i < float64(diagnostic.Timeout); i += 0.333 {
-		time.Sleep(time.Millisecond * 333)
-		akkerisapiurl := os.Getenv("AKKERIS_API_URL")
-		req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+oneoff.Podname+"/instance", nil)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		req.Header.Add("Content-type", "application/json")
-		client := http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer resp.Body.Close()
-		bodybytes, err := ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		var status structs.InstanceStatusSpec
-		err = json.Unmarshal(bodybytes, &status)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		if len(status) > 1 {
-			fmt.Println("JOB FAILED")
-			overallstatus = "failed"
-			endtime = time.Now().UTC()
-			for _, element := range status {
-				if element.Reason == "Error" || element.Phase == "Running/terminated" || element.Phase == "Failed/terminated" {
-					fmt.Println(element.Instanceid)
-					instance = element.Instanceid
-					fmt.Println(element.Phase)
-					fmt.Println(element.Reason)
-				}
+		for i = 0.0; i < float64(diagnostic.Timeout); i += 0.333 {
+			time.Sleep(time.Millisecond * 333)
+			akkerisapiurl := os.Getenv("AKKERIS_API_URL")
+			req, err := http.NewRequest("GET", akkerisapiurl+"/v1/space/"+diagnostic.JobSpace+"/app/"+oneoff.Podname+"/instance", nil)
+			if err != nil {
+				fmt.Println(err)
+				return
 			}
-			break
-		}
-                if len(status) == 0 {
-                        continue
-                }
-		instance = status[0].Instanceid
-		if status[0].Phase == "Succeeded/terminated" && status[0].Reason == "Completed" {
-			fmt.Println("JOB FINISHED OK")
-			overallstatus = "success"
-			endtime = time.Now().UTC()
-			break
-		}
+			req.Header.Add("Content-type", "application/json")
+			client := http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			defer resp.Body.Close()
+			bodybytes, err := ioutil.ReadAll(resp.Body)
+			fmt.Println(string(bodybytes))
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
-		if status[0].Phase == "Running/terminated" && status[0].Reason == "Error" {
-			fmt.Println("JOB FAILED")
-			overallstatus = "failed"
-			endtime = time.Now().UTC()
-			break
-		}
+			var status structs.InstanceStatusSpec
+			err = json.Unmarshal(bodybytes, &status)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			if len(status) > 1 {
+				fmt.Println("JOB FAILED")
+				overallstatus = "failed"
+				endtime = time.Now().UTC()
+				for _, element := range status {
+					if element.Reason == "Error" || element.Phase == "Running/terminated" || element.Phase == "Failed/terminated" {
+						fmt.Println(element.Instanceid)
+						instance = element.Instanceid
+						fmt.Println(element.Phase)
+						fmt.Println(element.Reason)
+					}
+				}
+				break
+			}
+			if len(status) == 0 {
+				continue
+			}
+			instance = status[0].Instanceid
+			if status[0].Phase == "Succeeded/terminated" && status[0].Reason == "Completed" {
+				fmt.Println("JOB FINISHED OK")
+				overallstatus = "success"
+				endtime = time.Now().UTC()
+				break
+			}
 
-		if status[0].Phase == "Running/waiting" && status[0].Reason == "CrashLoopBackOff" {
-			fmt.Println("JOB FAILED")
-			overallstatus = "failed"
-			endtime = time.Now().UTC()
-			break
+			if status[0].Phase == "Running/terminated" && status[0].Reason == "Error" {
+				fmt.Println("JOB FAILED")
+				overallstatus = "failed"
+				endtime = time.Now().UTC()
+				break
+			}
+
+			if status[0].Phase == "Running/waiting" && status[0].Reason == "CrashLoopBackOff" {
+				fmt.Println("JOB FAILED")
+				overallstatus = "failed"
+				endtime = time.Now().UTC()
+				break
+			}
+			if status[0].Phase == "Failed/terminated" && status[0].Reason == "Error" {
+				fmt.Println("JOB FAILED")
+				overallstatus = "failed"
+				endtime = time.Now().UTC()
+				break
+			}
+			if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
+				fmt.Println("JOB FAILED")
+				overallstatus = "failed"
+				endtime = time.Now().UTC()
+				break
+			}
 		}
-		if status[0].Phase == "Failed/terminated" && status[0].Reason == "Error" {
-			fmt.Println("JOB FAILED")
-			overallstatus = "failed"
-			endtime = time.Now().UTC()
-			break
-		}
-		if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
-			fmt.Println("JOB FAILED")
-			overallstatus = "failed"
-			endtime = time.Now().UTC()
-			break
-		}
-       	  }
-        }
+	}
 	fmt.Println("finishing....")
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
 	if err != nil {
 		fmt.Println(err)
 	}
 	diagnostic.OverallStatus = overallstatus
-	loglines.Logs =append(loglines.Logs, logs...)
+	loglines.Logs = append(loglines.Logs, logs...)
 	diagnosticlogs.WriteLogES(diagnostic, loglines)
 	_, err = describePodAndUploadToS3(diagnostic.JobSpace, oneoff.Podname, diagnostic.RunID)
 	if err != nil {
@@ -275,6 +403,10 @@ func check(diagnostic structs.DiagnosticSpec) {
 		fmt.Println(err)
 	}
 	notifications.PostResults(result)
+	if os.Getenv("STATUS_CHECKS") == "true" {
+		loglink := os.Getenv("LOG_URL") + "/logs/" + diagnostic.RunID
+		setStatusCheck(overallstatus, diagnostic, loglink)
+	}
 	var promotestatus string
 	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
