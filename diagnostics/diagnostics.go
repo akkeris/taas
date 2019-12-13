@@ -78,7 +78,7 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 
 func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", nil)
-        req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -114,7 +114,7 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 	}
 	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
 	req, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
-        req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -136,7 +136,7 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 	}
 	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
 	req, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
-        req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -157,6 +157,7 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 		releasestatus.State = "success"
 		releasestatus.Description = "Tests Passed!"
 		releasestatus.TargetURL = loglink
+		releasestatus.ImageURL = os.Getenv("ARTIFACTS_URL") + "/success.png"
 		statusid, err := getStatusCheck(diagnostic)
 		if err != nil {
 			fmt.Println(err)
@@ -169,18 +170,19 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 		releasestatus.Description = "Tests are still running"
 		releasestatus.Context = "taas/" + diagnostic.Job + "-" + diagnostic.JobSpace
 		createStatusCheck(releasestatus, diagnostic, loglink)
-                statusid, err := getStatusCheck(diagnostic)
-                if err != nil {
-                        fmt.Println(err)
-                }
-                fmt.Println("Updating status: " + statusid)
-                releasestatus.Context=""
-                updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
+		statusid, err := getStatusCheck(diagnostic)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("Updating status: " + statusid)
+		releasestatus.Context = ""
+		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
 	}
 	if status == "timedout" {
 		releasestatus.State = "failure"
 		releasestatus.Description = "Tests Timed Out"
 		releasestatus.TargetURL = loglink
+		releasestatus.ImageURL = os.Getenv("ARTIFACTS_URL") + "/fail.png"
 		statusid, err := getStatusCheck(diagnostic)
 		if err != nil {
 			fmt.Println(err)
@@ -191,6 +193,7 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 		releasestatus.State = "failure"
 		releasestatus.Description = "Tests Failed"
 		releasestatus.TargetURL = loglink
+		releasestatus.ImageURL = os.Getenv("ARTIFACTS_URL") + "/fail.png"
 		statusid, err := getStatusCheck(diagnostic)
 		if err != nil {
 			fmt.Println(err)
