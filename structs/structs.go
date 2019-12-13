@@ -4,6 +4,50 @@ import (
 	"time"
 )
 
+type Statuses struct {
+	State   string `json:"state"`
+	Release struct {
+		App struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"app"`
+		CreatedAt   time.Time `json:"created_at"`
+		Description string    `json:"description"`
+		Slug        struct {
+			ID string `json:"id"`
+		} `json:"slug"`
+		ID     string `json:"id"`
+		Status string `json:"status"`
+		State  string `json:"state"`
+		User   struct {
+			ID    string `json:"id"`
+			Email string `json:"email"`
+		} `json:"user"`
+		Version int  `json:"version"`
+		Current bool `json:"current"`
+	} `json:"release"`
+	Statuses []struct {
+		ID          string    `json:"id"`
+		State       string    `json:"state"`
+		Name        string    `json:"name"`
+		Context     string    `json:"context"`
+		Description string    `json:"description"`
+		TargetURL   string    `json:"target_url"`
+		ImageURL    string    `json:"image_url"`
+		CreatedAt   time.Time `json:"created_at"`
+		UpdatedAt   time.Time `json:"updated_at"`
+	} `json:"statuses"`
+}
+
+type ReleaseStatus  struct {
+	State       string `json:"state"`
+	Name        string `json:"name"`
+	Context     string `json:"context"`
+	TargetURL   string `json:"target_url"`
+	ImageURL    string `json:"image_url"`
+	Description string `json:"description"`
+}
+
 type LogLines struct {
 	Logs []string `json:"logs"`
 }
@@ -114,6 +158,7 @@ type DiagnosticSpec struct {
 	App            string                `json:"app"`
 	Organization   string                `json:"org"`
 	BuildID        string                `json:"buildid"`
+        ReleaseID      string                `json:"releaseid"`
 	GithubVersion  string                `json:"version"`
 	CommitAuthor   string                `json:"commitauthor"`
 	CommitMessage  string                `json:"commitmessage"`
@@ -134,6 +179,7 @@ type DiagnosticSpec struct {
 	Command        string                `json:"command"`
 	TestPreviews   bool                  `json:"testpreviews"` // Run diagnostic on the app's preview apps
 	IsPreview      bool                  `json:"ispreview"`    // This diagnostic is for a preview app
+        Token          string                `json:"token"`        
 }
 
 type DiagnosticSpecAudit struct {

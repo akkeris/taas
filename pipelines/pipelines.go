@@ -77,7 +77,7 @@ func PromoteApp(promotion structs.PromotionSpec) (s string, e error) {
         err = json.Unmarshal(bodybytes, &promotestatus)
         if err != nil {
                 fmt.Println(err)
-                return  "failed",  err
+                return  "failed.  "+string(bodybytes),  err
         }
 
 	return promotestatus.Status, nil
