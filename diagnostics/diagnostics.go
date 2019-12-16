@@ -24,12 +24,12 @@ import (
 	"text/template"
 	"time"
 
+	vault "github.com/akkeris/vault-client"
 	"github.com/go-martini/martini"
 	_ "github.com/lib/pq"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	uuid "github.com/nu7hatch/gouuid"
-        vault "github.com/akkeris/vault-client"
 )
 
 func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
@@ -77,10 +77,9 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	return nil
 }
 
-
 func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", nil)
-        req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -88,25 +87,25 @@ func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 		fmt.Println(err)
 		return "", err
 	}
-        var bodybytes []byte
-        if resp.StatusCode == 401 {
-            req2, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", nil)
-            req2.Header.Add("Content-type", "application/json")
-            req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
-            client2 := http.Client{}
-            resp2, err := client2.Do(req2)
-            if err != nil {
-                fmt.Println(err)
-                return "",err
-            }
-	    defer resp2.Body.Close()
-	    bodybytes, err = ioutil.ReadAll(resp2.Body)
-	    fmt.Println(string(bodybytes))
-        }else{
-            defer resp.Body.Close()
-            bodybytes, err = ioutil.ReadAll(resp.Body)
-            fmt.Println(string(bodybytes))
-        }
+	var bodybytes []byte
+	if resp.StatusCode == 401 {
+		req2, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", nil)
+		req2.Header.Add("Content-type", "application/json")
+		req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+		client2 := http.Client{}
+		resp2, err := client2.Do(req2)
+		if err != nil {
+			fmt.Println(err)
+			return "", err
+		}
+		defer resp2.Body.Close()
+		bodybytes, err = ioutil.ReadAll(resp2.Body)
+		fmt.Println(string(bodybytes))
+	} else {
+		defer resp.Body.Close()
+		bodybytes, err = ioutil.ReadAll(resp.Body)
+		fmt.Println(string(bodybytes))
+	}
 	var statuses structs.Statuses
 	var statusid string
 	err = json.Unmarshal(bodybytes, &statuses)
@@ -131,7 +130,7 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 	}
 	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
 	req, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
-        req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -139,27 +138,27 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 		fmt.Println(err)
 		return err
 	}
-        var bodybytes []byte
-        if resp.StatusCode == 401 {
-            req2, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
-            req2.Header.Add("Content-type", "application/json")
-            req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
-            client2 := http.Client{}
-            resp2, err := client2.Do(req2)
-            if err != nil {
-                    fmt.Println(err)
-                    return err
-            }
-	   defer resp2.Body.Close()
-	   bodybytes, err = ioutil.ReadAll(resp2.Body)
-	   fmt.Println(string(bodybytes))
-	   return nil
-        }else{
-           defer resp.Body.Close()
-           bodybytes, err = ioutil.ReadAll(resp.Body)
-           fmt.Println(string(bodybytes))
-           return nil
-        }
+	var bodybytes []byte
+	if resp.StatusCode == 401 {
+		req2, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
+		req2.Header.Add("Content-type", "application/json")
+		req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+		client2 := http.Client{}
+		resp2, err := client2.Do(req2)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		defer resp2.Body.Close()
+		bodybytes, err = ioutil.ReadAll(resp2.Body)
+		fmt.Println(string(bodybytes))
+		return nil
+	} else {
+		defer resp.Body.Close()
+		bodybytes, err = ioutil.ReadAll(resp.Body)
+		fmt.Println(string(bodybytes))
+		return nil
+	}
 }
 
 func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.DiagnosticSpec, loglink string) (e error) {
@@ -170,7 +169,7 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 	}
 	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
 	req, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
-        req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
+	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -178,29 +177,28 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 		fmt.Println(err)
 		return err
 	}
-        var bodybytes []byte
-        if resp.StatusCode == 401 {
-            req2, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
-            req.Header.Add("Content-type", "application/json")
-            req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
-            client2 := http.Client{}
-            resp2, err := client2.Do(req2)
-            if err != nil {
-                    fmt.Println(err)
-                    return err
-            }
-	    defer resp2.Body.Close()
-	    bodybytes, err:= ioutil.ReadAll(resp2.Body)
-	    fmt.Println(string(bodybytes))
-	    return nil
-          }else{
-            defer resp.Body.Close()
-            bodybytes, err = ioutil.ReadAll(resp.Body)
-            fmt.Println(string(bodybytes))
-            return nil
-          }
+	var bodybytes []byte
+	if resp.StatusCode == 401 {
+		req2, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
+		req.Header.Add("Content-type", "application/json")
+		req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+		client2 := http.Client{}
+		resp2, err := client2.Do(req2)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		defer resp2.Body.Close()
+		bodybytes, err := ioutil.ReadAll(resp2.Body)
+		fmt.Println(string(bodybytes))
+		return nil
+	} else {
+		defer resp.Body.Close()
+		bodybytes, err = ioutil.ReadAll(resp.Body)
+		fmt.Println(string(bodybytes))
+		return nil
+	}
 }
-
 
 func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink string) {
 	var releasestatus structs.ReleaseStatus
