@@ -14,7 +14,7 @@ go get  "github.com/aws/aws-sdk-go/aws/awserr"
 go get  "github.com/aws/aws-sdk-go/aws/session"
 go get  "github.com/aws/aws-sdk-go/service/s3"
 go get  "github.com/mattn/go-shellwords"
-go get  "github.com/bsm/sarama-cluster"
+go get  "github.com/Shopify/sarama"
 cd /go/src/taas
 go build server.go
 
