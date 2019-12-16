@@ -4,6 +4,28 @@ import (
 	"time"
 )
 
+type Releases  []struct {
+	App struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"app"`
+	CreatedAt   time.Time `json:"created_at"`
+	Description string    `json:"description"`
+	Slug        struct {
+		ID string `json:"id"`
+	} `json:"slug"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	State  string `json:"state"`
+	User   struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+	} `json:"user"`
+	Version int  `json:"version"`
+	Current bool `json:"current"`
+}
+
+
 type Statuses struct {
 	State   string `json:"state"`
 	Release struct {

@@ -92,6 +92,9 @@ CREATE TABLE IF NOT EXISTS testruns (
     overallstatus text,
     CONSTRAINT testruns_testid_runid_key UNIQUE (testid, runid)
 );
+
+ALTER TABLE testruns add column if not exists releaseid text;
+ALTER TABLE testruns add column if not exists run_on TIMESTAMP DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS testruns_pkey ON testruns(runid text_ops);
 CREATE UNIQUE INDEX IF NOT EXISTS testruns_testid_runid_key ON testruns(testid text_ops,runid text_ops);
 

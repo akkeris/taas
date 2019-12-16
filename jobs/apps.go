@@ -11,6 +11,33 @@ import (
 
 	vault "github.com/akkeris/vault-client"
 )
+func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec)(r string){
+        req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases", nil)
+        req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        if err != nil {
+                fmt.Println(err)
+                return ""
+        }
+        client := http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+                fmt.Println(err)
+                return ""
+        }
+        defer resp.Body.Close()
+        bodybytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+                fmt.Println(err)
+                return ""
+        }
+        var releases structs.Releases
+        err = json.Unmarshal(bodybytes, &releases)
+        if err != nil {
+                fmt.Println(err)
+                return ""
+        }
+        return releases[len(releases)-1].ID
+}               
 
 func GetVersion(app string, space string, buildid string) (s string, e error) {
 
