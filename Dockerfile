@@ -16,6 +16,7 @@ ADD githubapi /go/src/taas/githubapi
 ADD dbstore /go/src/taas/dbstore
 ADD artifacts /go/src/taas/artifacts
 ADD auth /go/src/taas/auth
+ADD static /go/src/taas/static
 ADD create.sql /go/src/taas/create.sql
 RUN /build.sh
 ADD start.sh /start.sh

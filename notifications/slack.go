@@ -66,7 +66,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 	if diagnostic.GithubVersion != "" {
 		slack.Text = slack.Text + "<" + diagnostic.GithubVersion + "|Commit>  "
 	}
-	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
+	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&releaseid="+diagnostic.ReleaseID + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
 	slack.Text = slack.Text + "Changes Made by: @" + diagnostic.CommitAuthor
 	slack.UnfurlLinks = false
 	slack.UnfurlMedia = false

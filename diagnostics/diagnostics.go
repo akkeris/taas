@@ -882,14 +882,15 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 
 func Rerun(req *http.Request, params martini.Params, r render.Render) {
 	qs := req.URL.Query()
-	space, app, action, result, buildid := qs.Get("space"), qs.Get("app"), qs.Get("action"), qs.Get("result"), qs.Get("buildid")
+	space, app, action, result, releaseid, buildid := qs.Get("space"), qs.Get("app"), qs.Get("action"), qs.Get("result"), qs.Get("releaseid"), qs.Get("buildid")
 
 	fmt.Println(space)
 	fmt.Println(app)
 	fmt.Println(action)
 	fmt.Println(result)
 	fmt.Println(buildid)
-	err := rerun(space, app, action, result, buildid)
+        fmt.Println(releaseid)
+	err := rerun(space, app, action, result, buildid, releaseid)
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
@@ -897,7 +898,7 @@ func Rerun(req *http.Request, params martini.Params, r render.Render) {
 	r.JSON(200, map[string]interface{}{"status": "rerunning"})
 
 }
-func rerun(space string, app string, action string, result string, buildid string) (e error) {
+func rerun(space string, app string, action string, result string, buildid string, releaseid string) (e error) {
 	diagnosticslist, err := GetDiagnostics(space, app, action, result)
 	if err != nil {
 		fmt.Println(err)
@@ -926,6 +927,16 @@ func rerun(space string, app string, action string, result string, buildid strin
 		}
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
+                element.ReleaseID=releaseid
+                if element.ReleaseID =="" {
+                    fmt.Println("release id not received.  Getting most recent") 
+                    element.ReleaseID = dbstore.GetMostRecentReleaseID(element)
+                }
+                if element.ReleaseID =="" {
+                    fmt.Println("release id not available in database.  Getting from controller")
+                    element.ReleaseID = akkeris.GetMostRecentReleaseID(element)
+                }
+                fmt.Println("RELEASE ID : "+element.ReleaseID)
 		RunDiagnostic(element)
 	}
 	return nil

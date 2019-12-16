@@ -20,6 +20,34 @@ import (
 	"github.com/martini-contrib/render"
 )
 
+func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec)(r string){
+     selectstring :=`select releaseid from testruns where testid = $1 and releaseid !='' order by run_on desc limit 1;`
+     uri := os.Getenv("DIAGNOSTICDB")
+     db, dberr := sql.Open("postgres", uri)
+     if dberr != nil {
+            fmt.Println(dberr)
+            return ""
+     } 
+    
+     defer db.Close()
+     stmt, err := db.Prepare(selectstring)
+     if err != nil {
+             fmt.Println(err)
+             return ""
+     } 
+     var releaseid string
+     defer stmt.Close()
+     rows, err := stmt.Query(diagnostic.ID)
+     for rows.Next() {
+           err := rows.Scan(&releaseid)
+                if err != nil {
+                        fmt.Println(err)
+                        return ""
+                }
+     }
+     db.Close()
+     return releaseid
+}
 func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
 
 	fmt.Println("************************* dbstore")
@@ -32,7 +60,7 @@ func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(dberr)
 	}
 
-	var stmtstring string = "insert into testruns (testid , runid , space , app , org , buildid , githubversion , commitauthor , commitmessage , action , result , job , jobspace , image , pipelinename , transitionfrom , transitionto , timeout, startdelay, overallstatus) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)"
+	var stmtstring string = "insert into testruns (testid , runid , space , app , org , buildid , githubversion , commitauthor , commitmessage , action , result , job , jobspace , image , pipelinename , transitionfrom , transitionto , timeout, startdelay, overallstatus, releaseid) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)"
 
 	stmt, err := db.Prepare(stmtstring)
 	if err != nil {
@@ -40,7 +68,7 @@ func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
 		return err
 	}
 
-	_, inserterr := stmt.Exec(diagnostic.ID, diagnostic.RunID, diagnostic.Space, diagnostic.App, diagnostic.Organization, diagnostic.BuildID, diagnostic.GithubVersion, diagnostic.CommitAuthor, diagnostic.CommitMessage, diagnostic.Action, diagnostic.Result, diagnostic.Job, diagnostic.JobSpace, diagnostic.Image, diagnostic.PipelineName, diagnostic.TransitionFrom, diagnostic.TransitionTo, diagnostic.Timeout, diagnostic.Startdelay, diagnostic.OverallStatus)
+	_, inserterr := stmt.Exec(diagnostic.ID, diagnostic.RunID, diagnostic.Space, diagnostic.App, diagnostic.Organization, diagnostic.BuildID, diagnostic.GithubVersion, diagnostic.CommitAuthor, diagnostic.CommitMessage, diagnostic.Action, diagnostic.Result, diagnostic.Job, diagnostic.JobSpace, diagnostic.Image, diagnostic.PipelineName, diagnostic.TransitionFrom, diagnostic.TransitionTo, diagnostic.Timeout, diagnostic.Startdelay, diagnostic.OverallStatus, diagnostic.ReleaseID)
 
 	if inserterr != nil {
 		stmt.Close()
