@@ -32,9 +32,18 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
+func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronjob) (e error) {
 
 	// may need to inject the run id into the config set at this point so that it is available to internal code if it will send logs
+
+
+        if isCron {
+                runiduuid, _ := uuid.NewV4()
+                runid := runiduuid.String()
+                diagnostic.RunID=runid
+                diagnostic.Startdelay=1
+                diagnostic.Command = cronjob.Command
+        }
 
 	var newvar structs.Varspec
 	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
@@ -73,7 +82,7 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec) (e error) {
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
 
-	go check(diagnostic)
+	go check(diagnostic, isCron, cronjob)
 	return nil
 }
 
@@ -252,9 +261,11 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 	}
 }
 
-func check(diagnostic structs.DiagnosticSpec) {
+func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronjob) {
 	if os.Getenv("STATUS_CHECKS") == "true" {
+              if !isCron{
 		setStatusCheck("pending", diagnostic, "")
+              }
 	}
 	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
@@ -427,6 +438,15 @@ func check(diagnostic structs.DiagnosticSpec) {
 	fmt.Println("done")
 	fmt.Println(overallstatus)
 	var result structs.ResultSpec
+
+
+        if isCron{
+          err = dbstore.StoreCronRun(diagnostic,starttime, endtime, cronjob.ID)
+          if err != nil {
+                fmt.Println(err)
+          }	
+         }
+
 	result.Payload.Lifecycle = "finished"
 	result.Payload.Outcome = overallstatus
 	result.Payload.Status = overallstatus
@@ -455,7 +475,9 @@ func check(diagnostic structs.DiagnosticSpec) {
 	notifications.PostResults(result)
 	if os.Getenv("STATUS_CHECKS") == "true" {
 		loglink := os.Getenv("LOG_URL") + "/logs/" + diagnostic.RunID
-		setStatusCheck(overallstatus, diagnostic, loglink)
+                if !isCron {
+	   	   setStatusCheck(overallstatus, diagnostic, loglink)
+                }
 	}
 	var promotestatus string
 	promotestatus = "failed"
@@ -515,7 +537,7 @@ func check(diagnostic structs.DiagnosticSpec) {
 		akkeris.UpdateVar(newVar)
 	}
 
-	notifications.PostToSlack(diagnostic, overallstatus, promotestatus)
+	notifications.PostToSlack(diagnostic, overallstatus, promotestatus,isCron)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
@@ -937,7 +959,7 @@ func rerun(space string, app string, action string, result string, buildid strin
                     element.ReleaseID = akkeris.GetMostRecentReleaseID(element)
                 }
                 fmt.Println("RELEASE ID : "+element.ReleaseID)
-		RunDiagnostic(element)
+		RunDiagnostic(element, false, structs.Cronjob{})
 	}
 	return nil
 }

@@ -120,5 +120,29 @@ CREATE TABLE IF NOT EXISTS audits (
   CONSTRAINT pkey_audits PRIMARY KEY (auditid)
 );
 
+CREATE TABLE IF NOT EXISTS cronjobs(
+  id text NOT NULL,
+  job text,
+  jobspace text,
+  cronspec text,
+  CONSTRAINT cronjobs_pk PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS cronruns(
+  testid text,
+  runid text,
+  space text,
+  app text,
+  job text,
+  jobspace text,
+  image text,
+  overallstatus text,
+  starttime timestamp without time zone,
+  endtime timestamp without time zone,
+  cronid text
+);
+
+
+
 END
 $$;

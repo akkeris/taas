@@ -32,7 +32,7 @@ type Slack struct {
 	Attachments []Attachment `json:"attachments"`
 }
 
-func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus string) {
+func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus string, isCron bool) {
 	var slack Slack
 	testframework := strings.ToUpper(strings.Split(strings.Replace(diagnostic.Image, "quay.octanner.io/developer/", "", -1), ":")[0])
 
@@ -108,7 +108,9 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
 		fmt.Println(string(bodybytes))
-		PostPromoteToSlack(diagnostic, status, promotestatus)
+                if !isCron{ 
+	        	PostPromoteToSlack(diagnostic, status, promotestatus)
+                }
 	}
 	if os.Getenv("ENABLE_DEBUG_SLACK_NOTIFICATIONS") == "true" {
 		debugslackurl := os.Getenv("DEBUG_SLACK_NOTIFICATION_URL")

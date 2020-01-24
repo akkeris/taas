@@ -19,6 +19,11 @@ func ReleaseHook(req *http.Request, releasehookpayload structs.ReleaseHookSpec, 
 		fmt.Println(berr)
 		return
 	}
+        ReleaseHookHandler(req, releasehookpayload, false)
+}
+
+func ReleaseHookHandler(req *http.Request, releasehookpayload structs.ReleaseHookSpec, isCron bool){
+
 	fmt.Println(releasehookpayload.App.Name)
 	fmt.Println(releasehookpayload.Space.Name)
 	fmt.Println(releasehookpayload.Action)
@@ -54,7 +59,7 @@ func ReleaseHook(req *http.Request, releasehookpayload structs.ReleaseHookSpec, 
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
 		spew.Dump(element)
-		diagnostics.RunDiagnostic(element)
+		diagnostics.RunDiagnostic(element, isCron,structs.Cronjob{})
 	}
 
 }

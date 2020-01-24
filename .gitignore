@@ -9,3 +9,7 @@ bs1.sh
 ds1.sh
 hd
 ui
+c
+go.mod
+go.sum
+

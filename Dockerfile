@@ -1,4 +1,4 @@
-FROM golang:1.10-alpine
+FROM golang:1.11-alpine
 RUN apk update
 RUN apk add openssl ca-certificates git build-base
 RUN mkdir -p /go/src/taas

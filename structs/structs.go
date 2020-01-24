@@ -899,3 +899,25 @@ type DestroyHookSpec struct {
 		Name string `json:"name"`
 	} `json:"space"`
 }
+
+
+type Cronjob struct {
+    ID string `json:"id"`
+    Job string `json:"job"`
+    Jobspace string `json:"jobspace"`
+    Cronspec string `json:"cs"`
+    Command string `json:"command"`
+    Prev time.Time `json:"prev"`
+    Next time.Time `json:"next"`
+}
+
+type CronjobRun struct {
+    Starttime time.Time `json:"starttime"`
+    Endtime time.Time  `json:"endtime"`
+    Overallstatus string `json:"overallstatus"`
+    RunID string `json:"runid"`
+}
+
+
+
+
