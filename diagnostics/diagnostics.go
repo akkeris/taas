@@ -527,16 +527,6 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		fmt.Println(promotestatus)
 	}
 
-	// Set the value of the config var targeted by `PREVIEW_URL_VAR`
-	// back to the original value
-	if diagnostic.IsPreview {
-		var newVar structs.Varspec
-		newVar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-		newVar.Varname = injectvarname
-		newVar.Varvalue = injectvarvalue
-		akkeris.UpdateVar(newVar)
-	}
-
 	notifications.PostToSlack(diagnostic, overallstatus, promotestatus,isCron)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
