@@ -527,7 +527,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		fmt.Println(promotestatus)
 	}
 
-	notifications.PostToSlack(diagnostic, overallstatus, promotestatus,isCron)
+	notifications.PostToSlack(diagnostic, overallstatus, promotestatus, isCron)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
