@@ -21,7 +21,12 @@ func PreviewReleasedHook(previewreleasedhookpayload structs.PreviewReleasedHookS
 		fmt.Println(berr)
 		return
 	}
+        PreviewReleasedHookHandler(previewreleasedhookpayload, false)
+}
 
+
+
+func PreviewReleasedHookHandler(previewreleasedhookpayload structs.PreviewReleasedHookSpec, isCron bool){
 	diagnosticslist, err := diagnostics.GetDiagnostics(previewreleasedhookpayload.Space.Name, previewreleasedhookpayload.App.Name, "preview-released", "succeeded")
 	if err != nil {
 		fmt.Println(err)
@@ -39,7 +44,7 @@ func PreviewReleasedHook(previewreleasedhookpayload structs.PreviewReleasedHookS
 		element.Organization = org
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-		diagnostics.RunDiagnostic(element)
+		diagnostics.RunDiagnostic(element,isCron,structs.Cronjob{})
 	}
 }
 

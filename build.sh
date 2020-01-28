@@ -15,6 +15,13 @@ go get  "github.com/aws/aws-sdk-go/aws/session"
 go get  "github.com/aws/aws-sdk-go/service/s3"
 go get  "github.com/mattn/go-shellwords"
 go get  "github.com/Shopify/sarama"
+cd /go/src/github.com
+mkdir robfig
+cd robfig
+git clone https://github.com/robfig/cron.git
+cd cron
+git checkout v3
+cd /go/src
 cd /go/src/taas
 go build server.go
 

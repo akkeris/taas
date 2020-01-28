@@ -12,7 +12,7 @@ import (
 	hooks "taas/hooks"
 	jobs "taas/jobs"
 	structs "taas/structs"
-
+        cronjobs "taas/cronjobs"
 	artifacts "taas/artifacts"
 
 	"github.com/go-martini/martini"
@@ -67,7 +67,10 @@ func main() {
 	checkEnv()
 	createDB()
 	dbstore.InitAuditPool()
+        dbstore.InitCronjobPool()
 	artifacts.Init()
+        cronjobs.StartCron()
+
 	jobs.StartClient()
 	m := martini.Classic()
 	m.Use(render.Renderer())
@@ -105,6 +108,11 @@ func main() {
 	m.Post("/v1/previewreleasedhook", binding.Json(structs.PreviewReleasedHookSpec{}), hooks.PreviewReleasedHook)
 	m.Post("/v1/previewcreatedhook", binding.Json(structs.PreviewCreatedHookSpec{}), hooks.PreviewCreatedHook)
 	m.Post("/v1/previewdestroyhook", binding.Json(structs.DestroyHookSpec{}), hooks.PreviewDestroyHook)
+
+        m.Get("/v1/cronjobs", cronjobs.GetCronjobs)
+        m.Post("/v1/cronjob", binding.Json(structs.Cronjob{}), cronjobs.AddCronjob)
+        m.Delete("/v1/cronjob/:id", cronjobs.DeleteCronjob)
+        m.Get("/v1/cronjob/:id/runs", cronjobs.GetCronjobRuns)
 
 	m.Use(martini.Static("static"))
 	m.Run()

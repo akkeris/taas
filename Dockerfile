@@ -1,4 +1,4 @@
-FROM golang:1.10-alpine
+FROM golang:1.11-alpine
 RUN apk update
 RUN apk add openssl ca-certificates git build-base
 RUN mkdir -p /go/src/taas
@@ -17,6 +17,7 @@ ADD dbstore /go/src/taas/dbstore
 ADD artifacts /go/src/taas/artifacts
 ADD auth /go/src/taas/auth
 ADD static /go/src/taas/static
+ADD cronjobs /go/src/taas/cronjobs
 ADD create.sql /go/src/taas/create.sql
 RUN /build.sh
 ADD start.sh /start.sh
