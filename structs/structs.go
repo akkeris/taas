@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type Releases  []struct {
+type Releases []struct {
 	App struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
@@ -24,7 +24,6 @@ type Releases  []struct {
 	Version int  `json:"version"`
 	Current bool `json:"current"`
 }
-
 
 type Statuses struct {
 	State   string `json:"state"`
@@ -61,7 +60,7 @@ type Statuses struct {
 	} `json:"statuses"`
 }
 
-type ReleaseStatus  struct {
+type ReleaseStatus struct {
 	State       string `json:"state"`
 	Name        string `json:"name"`
 	Context     string `json:"context"`
@@ -180,7 +179,7 @@ type DiagnosticSpec struct {
 	App            string                `json:"app"`
 	Organization   string                `json:"org"`
 	BuildID        string                `json:"buildid"`
-        ReleaseID      string                `json:"releaseid"`
+	ReleaseID      string                `json:"releaseid"`
 	GithubVersion  string                `json:"version"`
 	CommitAuthor   string                `json:"commitauthor"`
 	CommitMessage  string                `json:"commitmessage"`
@@ -201,7 +200,7 @@ type DiagnosticSpec struct {
 	Command        string                `json:"command"`
 	TestPreviews   bool                  `json:"testpreviews"` // Run diagnostic on the app's preview apps
 	IsPreview      bool                  `json:"ispreview"`    // This diagnostic is for a preview app
-        Token          string                `json:"token"`        
+	Token          string                `json:"token"`
 }
 
 type DiagnosticSpecAudit struct {
@@ -900,24 +899,46 @@ type DestroyHookSpec struct {
 	} `json:"space"`
 }
 
-
 type Cronjob struct {
-    ID string `json:"id"`
-    Job string `json:"job"`
-    Jobspace string `json:"jobspace"`
-    Cronspec string `json:"cs"`
-    Command string `json:"command"`
-    Prev time.Time `json:"prev"`
-    Next time.Time `json:"next"`
+	ID       string    `json:"id"`
+	Job      string    `json:"job"`
+	Jobspace string    `json:"jobspace"`
+	Cronspec string    `json:"cs"`
+	Command  string    `json:"command"`
+	Prev     time.Time `json:"prev"`
+	Next     time.Time `json:"next"`
 }
 
 type CronjobRun struct {
-    Starttime time.Time `json:"starttime"`
-    Endtime time.Time  `json:"endtime"`
-    Overallstatus string `json:"overallstatus"`
-    RunID string `json:"runid"`
+	Starttime     time.Time `json:"starttime"`
+	Endtime       time.Time `json:"endtime"`
+	Overallstatus string    `json:"overallstatus"`
+	RunID         string    `json:"runid"`
 }
 
+type PendingRun struct {
+	RunID         string    `json:"runid"`
+	TestID        string    `json:"testid"`
+	App           string    `json:"app"`
+	Space         string    `json:"space"`
+	Job           string    `json:"job"`
+	Jobspace      string    `json:"jobspace"`
+	Image         string    `json:"image"`
+	Overallstatus string    `json:"overallstatus"`
+	Timeout       int       `json:"timeout"`
+	RunOn         time.Time `json:"run_on"`
+}
 
-
-
+type PendingCronRun struct {
+	RunID         string    `json:"runid"`
+	TestID        string    `json:"testid"`
+	CronID        string    `json:"cronid"`
+	App           string    `json:"app"`
+	Space         string    `json:"space"`
+	Job           string    `json:"job"`
+	Jobspace      string    `json:"jobspace"`
+	Image         string    `json:"image"`
+	Overallstatus string    `json:"overallstatus"`
+	StartTime     time.Time `json:"starttime"`
+	EndTime       time.Time `json:"endtime,omitempty"`
+}

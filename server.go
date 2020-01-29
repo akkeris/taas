@@ -6,14 +6,14 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	artifacts "taas/artifacts"
+	cronjobs "taas/cronjobs"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	diagnostics "taas/diagnostics"
 	hooks "taas/hooks"
 	jobs "taas/jobs"
 	structs "taas/structs"
-        cronjobs "taas/cronjobs"
-	artifacts "taas/artifacts"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -67,9 +67,15 @@ func main() {
 	checkEnv()
 	createDB()
 	dbstore.InitAuditPool()
-        dbstore.InitCronjobPool()
+	dbstore.InitCronjobPool()
 	artifacts.Init()
-        cronjobs.StartCron()
+	cronjobs.StartCron()
+
+	// Mark orphan jobs (env should be set if running in production)
+	if os.Getenv("FIND_ORPHANS") != "" {
+		dbstore.FindOrphans()
+		dbstore.FindCronOrphans()
+	}
 
 	jobs.StartClient()
 	m := martini.Classic()
@@ -109,10 +115,12 @@ func main() {
 	m.Post("/v1/previewcreatedhook", binding.Json(structs.PreviewCreatedHookSpec{}), hooks.PreviewCreatedHook)
 	m.Post("/v1/previewdestroyhook", binding.Json(structs.DestroyHookSpec{}), hooks.PreviewDestroyHook)
 
-        m.Get("/v1/cronjobs", cronjobs.GetCronjobs)
-        m.Post("/v1/cronjob", binding.Json(structs.Cronjob{}), cronjobs.AddCronjob)
-        m.Delete("/v1/cronjob/:id", cronjobs.DeleteCronjob)
-        m.Get("/v1/cronjob/:id/runs", cronjobs.GetCronjobRuns)
+	m.Get("/v1/cronjobs", cronjobs.GetCronjobs)
+	m.Post("/v1/cronjob", binding.Json(structs.Cronjob{}), cronjobs.AddCronjob)
+	m.Delete("/v1/cronjob/:id", cronjobs.DeleteCronjob)
+	m.Get("/v1/cronjob/:id/runs", cronjobs.GetCronjobRuns)
+
+	m.Get("/v1/status/runs", diagnostics.GetCurrentRuns)
 
 	m.Use(martini.Static("static"))
 	m.Run()

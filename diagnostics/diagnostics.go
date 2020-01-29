@@ -36,14 +36,13 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronjob struc
 
 	// may need to inject the run id into the config set at this point so that it is available to internal code if it will send logs
 
-
-        if isCron {
-                runiduuid, _ := uuid.NewV4()
-                runid := runiduuid.String()
-                diagnostic.RunID=runid
-                diagnostic.Startdelay=1
-                diagnostic.Command = cronjob.Command
-        }
+	if isCron {
+		runiduuid, _ := uuid.NewV4()
+		runid := runiduuid.String()
+		diagnostic.RunID = runid
+		diagnostic.Startdelay = 1
+		diagnostic.Command = cronjob.Command
+	}
 
 	var newvar structs.Varspec
 	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
@@ -262,14 +261,16 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 }
 
 func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronjob) {
-	if os.Getenv("STATUS_CHECKS") == "true" {
-              if !isCron{
+	// Create status check (if applicable)
+	if os.Getenv("STATUS_CHECKS") == "true" && !isCron {
 		setStatusCheck("pending", diagnostic, "")
-              }
 	}
-	fmt.Println("Start Delay Set to : " + strconv.Itoa(diagnostic.Startdelay))
+
+	// Delay start of job according to the configured start delay
+	fmt.Println("Job " + diagnostic.RunID + " start delay set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
+	// Configure the Kubernetes pod
 	var oneoff structs.OneOffSpec
 	oneoff.Space = diagnostic.JobSpace
 	oneoff.Podname = strings.ToLower(diagnostic.Job) + "-" + diagnostic.RunID
@@ -290,10 +291,11 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 	}
 	oneoff.Env = fetched
 
-	var injectvarname string
-
 	// Allow users to set `PREVIEW_URL_VAR` to the name of the config var that they want
 	// us to inject the URL of the preview app into
+
+	var injectvarname string
+
 	if diagnostic.IsPreview {
 		// Find the PREVIEW_URL_VAR to replace
 		for _, element := range oneoff.Env {
@@ -310,20 +312,28 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		}
 	}
 
+	// Create the job in the database with status of "starting"
+	diagnostic.OverallStatus = "starting"
+	dbstore.StoreRun(diagnostic)
+
+	// Delete any identical old pods that may exist
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	time.Sleep(time.Second * 5)
-	resp, err := akkeris.Startpod(oneoff)
+
+	// Create the pod in Kubernetes, starting the run
+	_, err = akkeris.Startpod(oneoff)
 	starttime := time.Now().UTC()
 	endtime := time.Now().UTC()
+
+	// Set this to "timeout" to consider the job timed out if the loop ends without changing status
+	overallstatus := "timedout"
+
 	var instance string
-	var overallstatus string
-	overallstatus = "timedout"
 	var loglines structs.LogLines
 	var i float64
-	fmt.Println(resp)
+
 	if err != nil {
-		fmt.Println("unable to start pod")
-		fmt.Println("JOB FAILED")
+		fmt.Println("JOB " + diagnostic.RunID + " FAILED: unable to start pod")
 		overallstatus = "failed"
 		endtime = time.Now().UTC()
 		loglines.Logs = append(loglines.Logs, "Message: Unable to start tests")
@@ -331,7 +341,9 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		loglines.Logs = append(loglines.Logs, "Message: "+err.Error())
 	} else {
 		time.Sleep(time.Second * 3)
+		updated := false
 
+		// Check on the Kubernetes pod until the configured timeout
 		for i = 0.0; i < float64(diagnostic.Timeout); i += 0.333 {
 			time.Sleep(time.Millisecond * 333)
 			akkerisapiurl := os.Getenv("AKKERIS_API_URL")
@@ -349,7 +361,6 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			}
 			defer resp.Body.Close()
 			bodybytes, err := ioutil.ReadAll(resp.Body)
-			fmt.Println(string(bodybytes))
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -362,7 +373,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 				return
 			}
 			if len(status) > 1 {
-				fmt.Println("JOB FAILED")
+				fmt.Println("JOB " + diagnostic.RunID + " FAILED")
 				overallstatus = "failed"
 				endtime = time.Now().UTC()
 				for _, element := range status {
@@ -411,9 +422,19 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 				endtime = time.Now().UTC()
 				break
 			}
+
+			// Update the job in the database to show that the pod is running
+			if status[0].Phase == "Running/running" && status[0].Reason == "" && !updated {
+				diagnostic.OverallStatus = "running"
+				dbstore.UpdateRunStatus(diagnostic)
+				updated = true
+			}
 		}
 	}
-	fmt.Println("finishing....")
+
+	fmt.Println("Finishing job " + diagnostic.RunID + "...")
+
+	// Store logs
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
 	if err != nil {
 		fmt.Println(err)
@@ -425,22 +446,21 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = dbstore.StoreRun(diagnostic)
+
+	// Update job in the database with the final status
+	if isCron {
+		err = dbstore.UpdateCronRun(diagnostic)
+	} else {
+		err = dbstore.UpdateRunStatus(diagnostic)
+	}
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("done")
-	fmt.Println(overallstatus)
+
+	fmt.Println("Job " + diagnostic.RunID + " finished with status: \"" + overallstatus + "\"")
+
+	// Notify postback URL
 	var result structs.ResultSpec
-
-
-        if isCron{
-          err = dbstore.StoreCronRun(diagnostic,starttime, endtime, cronjob.ID)
-          if err != nil {
-                fmt.Println(err)
-          }	
-         }
-
 	result.Payload.Lifecycle = "finished"
 	result.Payload.Outcome = overallstatus
 	result.Payload.Status = overallstatus
@@ -455,7 +475,6 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 	var action structs.ActionSpec
 	action.Name = diagnostic.Job + "-" + diagnostic.JobSpace
 	action.Status = overallstatus
-	//action.Messages = logs
 	var actions []structs.ActionSpec
 	actions = append(actions, action)
 	step.Actions = actions
@@ -467,20 +486,23 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		fmt.Println(err)
 	}
 	notifications.PostResults(result)
+
+	// Update status check (if applicable)
 	if os.Getenv("STATUS_CHECKS") == "true" {
 		loglink := os.Getenv("LOG_URL") + "/logs/" + diagnostic.RunID
-                if !isCron {
-	   	   setStatusCheck(overallstatus, diagnostic, loglink)
-                }
+		if !isCron {
+			setStatusCheck(overallstatus, diagnostic, loglink)
+		}
 	}
+
+	// Handle pipeline promotion (if applicable)
 	var promotestatus string
 	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
 		transitiontoa := strings.Split(transitionto, ",")
-		fmt.Println("transition from: " + transitionfrom)
-		fmt.Println("transition to: " + transitionto)
+		fmt.Println("Promoting " + transitionfrom + " to " + transitionto + " for job " + diagnostic.RunID)
 
 		var fromappid string
 		var toappids []string
@@ -490,15 +512,12 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			fmt.Println(err)
 		}
 		for _, element := range pipeline {
-			fmt.Println(element.Stage)
-			fmt.Println(element.App.Name)
 			if element.Stage+":"+element.App.Name == transitionfrom {
 				fromappid = element.App.ID
 				pipelineid = element.Pipeline.ID
 			}
 			for _, trelement := range transitiontoa {
 				if element.Stage+":"+element.App.Name == trelement {
-					fmt.Println("setting app id for target to " + element.App.ID)
 					toappids = append(toappids, element.App.ID)
 				}
 			}
@@ -518,9 +537,10 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(promotestatus)
+		fmt.Println("Promotion finished with status \"" + promotestatus + "\" for job " + diagnostic.RunID)
 	}
 
+	// Post results to Slack and clean up Kubernetes pod
 	notifications.PostToSlack(diagnostic, overallstatus, promotestatus, isCron)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
@@ -933,16 +953,16 @@ func rerun(space string, app string, action string, result string, buildid strin
 		}
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-                element.ReleaseID=releaseid
-                if element.ReleaseID =="" {
-                    fmt.Println("release id not received.  Getting most recent") 
-                    element.ReleaseID = dbstore.GetMostRecentReleaseID(element)
-                }
-                if element.ReleaseID =="" {
-                    fmt.Println("release id not available in database.  Getting from controller")
-                    element.ReleaseID = akkeris.GetMostRecentReleaseID(element)
-                }
-                fmt.Println("RELEASE ID : "+element.ReleaseID)
+		element.ReleaseID = releaseid
+		if element.ReleaseID == "" {
+			fmt.Println("release id not received.  Getting most recent")
+			element.ReleaseID = dbstore.GetMostRecentReleaseID(element)
+		}
+		if element.ReleaseID == "" {
+			fmt.Println("release id not available in database.  Getting from controller")
+			element.ReleaseID = akkeris.GetMostRecentReleaseID(element)
+		}
+		fmt.Println("RELEASE ID : " + element.ReleaseID)
 		RunDiagnostic(element, false, structs.Cronjob{})
 	}
 	return nil
@@ -1291,4 +1311,30 @@ Events:
 
 	artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)
 	return templatepod, nil
+}
+
+// Return a list of all currently running jobs
+func GetCurrentRuns(req *http.Request, params martini.Params, r render.Render) {
+	type AllPendingRuns struct {
+		CurrentRuns     []structs.PendingRun     `json:"current_runs"`
+		CurrentCronRuns []structs.PendingCronRun `json:"current_cron_runs"`
+	}
+
+	runs, err := dbstore.GetCurrentRuns()
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err})
+	}
+
+	cronRuns, err := dbstore.GetCurrentCronRuns()
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err})
+	}
+
+	var resp AllPendingRuns
+	resp.CurrentCronRuns = cronRuns
+	resp.CurrentRuns = runs
+
+	r.JSON(200, resp)
 }

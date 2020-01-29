@@ -6,6 +6,7 @@ import (
 	"regexp"
 	akkeris "taas/jobs"
 	structs "taas/structs"
+	"time"
 
 	"encoding/json"
 	"encoding/xml"
@@ -20,40 +21,53 @@ import (
 	"github.com/martini-contrib/render"
 )
 
-func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec)(r string){
-     selectstring :=`select releaseid from testruns where testid = $1 and releaseid !='' order by run_on desc limit 1;`
-     uri := os.Getenv("DIAGNOSTICDB")
-     db, dberr := sql.Open("postgres", uri)
-     if dberr != nil {
-            fmt.Println(dberr)
-            return ""
-     } 
-    
-     defer db.Close()
-     stmt, err := db.Prepare(selectstring)
-     if err != nil {
-             fmt.Println(err)
-             return ""
-     } 
-     var releaseid string
-     defer stmt.Close()
-     rows, err := stmt.Query(diagnostic.ID)
-     for rows.Next() {
-           err := rows.Scan(&releaseid)
-                if err != nil {
-                        fmt.Println(err)
-                        return ""
-                }
-     }
-     db.Close()
-     return releaseid
+// FindOrphans - If jobs are in the "starting" or "running" state from any previous TaaS instance, mark them as orphans
+func FindOrphans() {
+	uri := os.Getenv("DIAGNOSTICDB")
+	db, dberr := sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println(dberr)
+		return
+	}
+	defer db.Close()
+
+	_, err := db.Exec("update testruns set overallstatus=$1 where overallstatus=$2 or overallstatus=$3", "orphaned", "starting", "running")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
+
+func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec) (r string) {
+	selectstring := `select releaseid from testruns where testid = $1 and releaseid !='' order by run_on desc limit 1;`
+	uri := os.Getenv("DIAGNOSTICDB")
+	db, dberr := sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println(dberr)
+		return ""
+	}
+
+	defer db.Close()
+	stmt, err := db.Prepare(selectstring)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	var releaseid string
+	defer stmt.Close()
+	rows, err := stmt.Query(diagnostic.ID)
+	for rows.Next() {
+		err := rows.Scan(&releaseid)
+		if err != nil {
+			fmt.Println(err)
+			return ""
+		}
+	}
+	db.Close()
+	return releaseid
+}
+
 func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
-
-	fmt.Println("************************* dbstore")
-	fmt.Println(diagnostic)
-	fmt.Println("************************* dbstore")
-
+	fmt.Println("Storing run " + diagnostic.RunID + " with status " + diagnostic.OverallStatus)
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -77,6 +91,24 @@ func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
 	}
 	stmt.Close()
 	db.Close()
+	return nil
+}
+
+func UpdateRunStatus(diagnostic structs.DiagnosticSpec) (e error) {
+	fmt.Println("Updating run " + diagnostic.RunID + " with status " + diagnostic.OverallStatus)
+	uri := os.Getenv("DIAGNOSTICDB")
+	db, dberr := sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println(dberr)
+		return dberr
+	}
+	defer db.Close()
+
+	_, inserterr := db.Exec("update testruns set overallstatus=$1 where runid=$2", diagnostic.OverallStatus, diagnostic.RunID)
+
+	if inserterr != nil {
+		return inserterr
+	}
 	return nil
 }
 
@@ -283,4 +315,56 @@ func findDiagnostic(input string, selectstring string) (d structs.DiagnosticSpec
 	db.Close()
 
 	return diagnostic, nil
+}
+
+func GetCurrentRuns() (r []structs.PendingRun, e error) {
+	var runs []structs.PendingRun
+
+	uri := os.Getenv("DIAGNOSTICDB")
+	db, dberr := sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println(dberr)
+		return runs, dberr
+	}
+	defer db.Close()
+
+	rows, err := db.Query("select runid, testid, app, space, job, jobspace, image, overallstatus, timeout, run_on from testruns where overallstatus='starting' or overallstatus='running'")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var drunid string
+	var dtestid string
+	var dapp string
+	var dspace string
+	var djob string
+	var djobspace string
+	var dimage string
+	var doverallstatus string
+	var dtimeout int
+	var drunon time.Time
+
+	for rows.Next() {
+		err := rows.Scan(&drunid, &dtestid, &dapp, &dspace, &djob, &djobspace, &dimage, &doverallstatus, &dtimeout, &drunon)
+		if err != nil {
+			fmt.Println(err)
+			return runs, err
+		}
+
+		var run structs.PendingRun
+		run.RunID = drunid
+		run.TestID = dtestid
+		run.App = dapp
+		run.Space = dspace
+		run.Job = djob
+		run.Jobspace = djobspace
+		run.Image = dimage
+		run.Overallstatus = doverallstatus
+		run.Timeout = dtimeout
+		run.RunOn = drunon
+
+		runs = append(runs, run)
+	}
+
+	return runs, nil
 }

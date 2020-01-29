@@ -3,81 +3,97 @@ package dbstore
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
-	uuid "github.com/nu7hatch/gouuid"
 	"os"
 	structs "taas/structs"
-        "time"
-)
+	"time"
 
+	_ "github.com/lib/pq"
+	uuid "github.com/nu7hatch/gouuid"
+)
 
 var cdb *sql.DB
 
 func InitCronjobPool() {
-        uri := os.Getenv("DIAGNOSTICDB")
-        var dberr error
-        cdb, dberr = sql.Open("postgres", uri)
-        if dberr != nil {
-                fmt.Println(dberr)
-                os.Exit(1)
-        }
+	uri := os.Getenv("DIAGNOSTICDB")
+	var dberr error
+	cdb, dberr = sql.Open("postgres", uri)
+	if dberr != nil {
+		fmt.Println(dberr)
+		os.Exit(1)
+	}
 
+}
+
+// FindCronOrphans - If jobs are in the "starting" or "running" state from any previous TaaS instance, mark them as orphans
+func FindCronOrphans() {
+	_, err := cdb.Exec("update cronruns set overallstatus='orphaned' where overallstatus='starting' or overallstatus='running'")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func StoreCronRun(diagnostic structs.DiagnosticSpec, starttime time.Time, endtime time.Time, cronid string) (e error) {
 
-        var stmtstring string = "insert into cronruns (testid , runid , space , app , job , jobspace , image, overallstatus, starttime, endtime,cronid) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)"
+	var stmtstring string = "insert into cronruns (testid , runid , space , app , job , jobspace , image, overallstatus, starttime, endtime,cronid) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)"
 
-        stmt, err := cdb.Prepare(stmtstring)
-        if err != nil {
-                db.Close()
-                return err
-        }
+	stmt, err := cdb.Prepare(stmtstring)
+	if err != nil {
+		db.Close()
+		return err
+	}
 
-        _, inserterr := stmt.Exec(diagnostic.ID, diagnostic.RunID, diagnostic.Space, diagnostic.App, diagnostic.Job, diagnostic.JobSpace, diagnostic.Image, diagnostic.OverallStatus, starttime, endtime,cronid)
+	_, inserterr := stmt.Exec(diagnostic.ID, diagnostic.RunID, diagnostic.Space, diagnostic.App, diagnostic.Job, diagnostic.JobSpace, diagnostic.Image, diagnostic.OverallStatus, starttime, endtime, cronid)
 
-        if inserterr != nil {
-                stmt.Close()
-                return inserterr
-        }
-        stmt.Close()
-        return nil
+	if inserterr != nil {
+		stmt.Close()
+		return inserterr
+	}
+	stmt.Close()
+	return nil
+}
+
+func UpdateCronRun(diagnostic structs.DiagnosticSpec) (e error) {
+	_, err := cdb.Exec("update cronruns set overallstatus=$1 where runid=$2", diagnostic.OverallStatus, diagnostic.RunID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func GetCronjobRuns(id string, runs string, filter string) (j []structs.CronjobRun, e error) {
-        var cronjobruns []structs.CronjobRun
-        var selectstring string
-        if filter =="all"{
-           selectstring = "select * from (select starttime, endtime, overallstatus, runid from cronruns where cronid = $1 order by starttime desc limit "+runs+") as t order by starttime asc"
-        }
-        if filter != "all"{
-           selectstring = "select * from (select starttime, endtime, overallstatus, runid from cronruns where cronid = $1 and overallstatus = '"+filter+"' order by starttime desc limit "+runs+") as t order by starttime asc"
-        }
-        stmt, err := cdb.Prepare(selectstring)
-        if err != nil {
-                fmt.Println(err)
-                return cronjobruns, err
-        }
-        defer stmt.Close()
-        rows, err := stmt.Query(id)
-        for rows.Next() {
-                var current structs.CronjobRun
-                var starttime time.Time
-                var endtime time.Time
-                var overallstatus string
-                var runid string
-                err := rows.Scan(&starttime, &endtime, &overallstatus, &runid)
-                if err != nil {
-                        return cronjobruns, err
-                        fmt.Println(err)
-                }
-                current.Starttime= starttime
-                current.Endtime=endtime
-                current.Overallstatus=overallstatus
-                current.RunID=runid
-                cronjobruns = append(cronjobruns, current)
-        }
-        return cronjobruns, nil
+	var cronjobruns []structs.CronjobRun
+	var selectstring string
+	if filter == "all" {
+		selectstring = "select * from (select starttime, endtime, overallstatus, runid from cronruns where cronid = $1 order by starttime desc limit " + runs + ") as t order by starttime asc"
+	}
+	if filter != "all" {
+		selectstring = "select * from (select starttime, endtime, overallstatus, runid from cronruns where cronid = $1 and overallstatus = '" + filter + "' order by starttime desc limit " + runs + ") as t order by starttime asc"
+	}
+	stmt, err := cdb.Prepare(selectstring)
+	if err != nil {
+		fmt.Println(err)
+		return cronjobruns, err
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(id)
+	for rows.Next() {
+		var current structs.CronjobRun
+		var starttime time.Time
+		var endtime time.Time
+		var overallstatus string
+		var runid string
+		err := rows.Scan(&starttime, &endtime, &overallstatus, &runid)
+		if err != nil {
+			return cronjobruns, err
+			fmt.Println(err)
+		}
+		current.Starttime = starttime
+		current.Endtime = endtime
+		current.Overallstatus = overallstatus
+		current.RunID = runid
+		cronjobruns = append(cronjobruns, current)
+	}
+	return cronjobruns, nil
 }
 
 func GetCronjobs() (j []structs.Cronjob, e error) {
@@ -96,8 +112,8 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 		var job string
 		var jobspace string
 		var cs string
-                var command string
-		err := rows.Scan(&id, &job, &jobspace, &cs,&command)
+		var command string
+		err := rows.Scan(&id, &job, &jobspace, &cs, &command)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -105,7 +121,7 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 		current.Job = job
 		current.Jobspace = jobspace
 		current.Cronspec = cs
-                current.Command = command
+		current.Command = command
 		cronjobs = append(cronjobs, current)
 	}
 	return cronjobs, nil
@@ -122,7 +138,7 @@ func AddCronJob(cronjob structs.Cronjob) (e error) {
 		return err
 	}
 
-	_, inserterr := stmt.Exec(id, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec,cronjob.Command)
+	_, inserterr := stmt.Exec(id, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec, cronjob.Command)
 	if inserterr != nil {
 		fmt.Println(inserterr)
 		return inserterr
@@ -175,7 +191,51 @@ func DeleteCronjob(id string) (e error) {
 	}
 	fmt.Println(affect)
 
-
 	return nil
+}
 
+func GetCurrentCronRuns() (r []structs.PendingCronRun, e error) {
+	var runs []structs.PendingCronRun
+
+	rows, err := cdb.Query("select runid, testid, cronid, app, space, job, jobspace, image, overallstatus, starttime, endtime from cronruns where overallstatus='starting' or overallstatus='running'")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var drunid string
+	var dtestid string
+	var dcronid string
+	var dapp string
+	var dspace string
+	var djob string
+	var djobspace string
+	var dimage string
+	var doverallstatus string
+	var dstarttime time.Time
+	var dendtime time.Time
+
+	for rows.Next() {
+		err := rows.Scan(&drunid, &dtestid, &dcronid, &dapp, &dspace, &djob, &djobspace, &dimage, &doverallstatus, &dstarttime, &dendtime)
+		if err != nil {
+			fmt.Println(err)
+			return runs, err
+		}
+
+		var run structs.PendingCronRun
+		run.RunID = drunid
+		run.TestID = dtestid
+		run.CronID = dcronid
+		run.App = dapp
+		run.Space = dspace
+		run.Job = djob
+		run.Jobspace = djobspace
+		run.Image = dimage
+		run.Overallstatus = doverallstatus
+		run.StartTime = dstarttime
+		run.EndTime = dendtime
+
+		runs = append(runs, run)
+	}
+
+	return runs, nil
 }
