@@ -2,15 +2,16 @@ package cronjobs
 
 import (
 	"fmt"
+	"net/http"
+	dbstore "taas/dbstore"
+	diagnostics "taas/diagnostics"
+	structs "taas/structs"
+
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/robfig/cron"
-	"net/http"
-	dbstore "taas/dbstore"
-	diagnostics "taas/diagnostics"
-	structs "taas/structs"
 )
 
 var Cronjob *cron.Cron
@@ -41,21 +42,21 @@ func scheduleJob(diagnostic structs.DiagnosticSpec, cronjob structs.Cronjob) {
 func GetCronjobRuns(req *http.Request, params martini.Params, r render.Render) {
 	var cronjobruns []structs.CronjobRun
 	var runs string
-        var filter string
-        runs = ""
-        filter = ""
-        if len(req.URL.Query()["runs"]) >= 1 {
-            runs = req.URL.Query()["runs"][0]
-        }
-        if len(req.URL.Query()["filter"]) >= 1 {
-            filter = req.URL.Query()["filter"][0]
-        }
-        if runs == "" {
-             runs = "10"
-        }
-        if filter == "" {
-            filter = "all"
-        }
+	var filter string
+	runs = ""
+	filter = ""
+	if len(req.URL.Query()["runs"]) >= 1 {
+		runs = req.URL.Query()["runs"][0]
+	}
+	if len(req.URL.Query()["filter"]) >= 1 {
+		filter = req.URL.Query()["filter"][0]
+	}
+	if runs == "" {
+		runs = "10"
+	}
+	if filter == "" {
+		filter = "all"
+	}
 	cronjobruns, err := dbstore.GetCronjobRuns(params["id"], runs, filter)
 	if err != nil {
 		fmt.Println(err)

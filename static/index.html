@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title>Current TaaS Runs</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="container-fluid" id="root">
+      <h1 id="title">Current TaaS Tests</h1>
+      <span class="subtitle-container">
+        <span class="subtitle">Refreshes every 5s</span>
+        <span id="loading-indicator"></span>
+      </span>
+      <button class="btn-sm btn-secondary" type="button" data-toggle="collapse" data-target="#collapseable">
+        Status Icon Info
+      </button>
+      <div class="collapse" id="collapseable">
+        <div class="collapse-content">
+          <span>Running</span>
+          <div class="running-spinner"></div>
+          <span>Starting</span>
+          <div class="pending-spinner"><div class="rect1"></div><div class="rect2"></div><div class="rect3"></div><div class="rect4"></div><div class="rect5"></div></div>
+        </div>
+      </div>
+      <table class="table" id="runs_table">
+        <thead>
+          <tr>
+            <th scope="col">Status</th>
+            <th scope="col">Run ID</th>
+            <th scope="col">Test</th>
+            <th scope="col">App</th>
+            <th scope="col">Image</th>
+            <th scope="col">Started</th>
+            <th scope="col">Timeout</th>
+          </tr>
+        </thead>
+        <tbody id="runs_table_body">
+        </tbody>
+      </table>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+      function getData() {
+        const loadingIndicator = document.getElementById("loading-indicator");
+        loadingIndicator.innerHTML = `<div class="sk-fading-circle"><div class="sk-circle1 sk-circle"></div><div class="sk-circle2 sk-circle"></div><div class="sk-circle3 sk-circle"></div><div class="sk-circle4 sk-circle"></div><div class="sk-circle5 sk-circle"></div><div class="sk-circle6 sk-circle"></div><div class="sk-circle7 sk-circle"></div><div class="sk-circle8 sk-circle"></div><div class="sk-circle9 sk-circle"></div><div class="sk-circle10 sk-circle"></div><div class="sk-circle11 sk-circle"></div><div class="sk-circle12 sk-circle"></div></div>`;
+        axios.get('/v1/status/runs').then(resp => {
+          const tableBody = document.getElementById("runs_table_body")
+          tableBody.innerHTML = "";
+          const { data } = resp;
+          if (data.current_runs) {
+            data.current_runs.forEach(run => {
+              var row = tableBody.insertRow();
+              const statusIconCell = row.insertCell();
+              if (run.overallstatus === "running") {
+                statusIconCell.innerHTML = `<div class="running-spinner"></div>`;
+              } else if (run.overallstatus === "starting") {
+                statusIconCell.innerHTML = `<div class="pending-spinner"><div class="rect1"></div><div class="rect2"></div><div class="rect3"></div><div class="rect4"></div><div class="rect5"></div></div>`;
+              }
+              row.insertCell().innerHTML = run.runid;
+              row.insertCell().innerHTML = `${run.job}-${run.jobspace}`;
+              row.insertCell().innerHTML = `${run.app}-${run.space}`;
+              row.insertCell().innerHTML = run.image;
+              row.insertCell().innerHTML = new Date(run.run_on).toLocaleTimeString();
+              row.insertCell().innerHTML = `${run.timeout}s`;
+            });
+          }
+          if (data.current_cron_runs) {
+            data.current_cron_runs.forEach(run => {
+              var row = tableBody.insertRow();
+              const statusIconCell = row.insertCell();
+              if (run.overallstatus === "running") {
+                statusIconCell.innerHTML = `<div class="running-spinner"></div>`;
+              } else if (run.overallstatus === "starting") {
+                statusIconCell.innerHTML = `<div class="pending-spinner"><div class="rect1"></div><div class="rect2"></div><div class="rect3"></div><div class="rect4"></div><div class="rect5"></div></div>`;
+              }
+              row.insertCell().innerHTML = run.runid;
+              row.insertCell().innerHTML = `${run.job}-${run.jobspace}`;
+              row.insertCell().innerHTML = `${run.app}-${run.space}`;
+              row.insertCell().innerHTML = run.image;
+              row.insertCell().innerHTML = new Date(run.starttime).toLocaleTimeString();
+              row.insertCell().innerHTML = `cron`;
+            });
+          }
+          loadingIndicator.innerHTML = "";
+        }).catch(err => {
+          console.error(err)
+        });
+      }
+      getData();
+      setInterval(getData, 5000);
+    </script>
+  </body>
+</html>
