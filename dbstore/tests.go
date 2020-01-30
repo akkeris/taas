@@ -6,7 +6,6 @@ import (
 	"regexp"
 	akkeris "taas/jobs"
 	structs "taas/structs"
-	"time"
 
 	"encoding/json"
 	"encoding/xml"
@@ -333,35 +332,15 @@ func GetCurrentRuns() (r []structs.PendingRun, e error) {
 		fmt.Println(err)
 	}
 
-	var drunid string
-	var dtestid string
-	var dapp string
-	var dspace string
-	var djob string
-	var djobspace string
-	var dimage string
-	var doverallstatus string
-	var dtimeout int
-	var drunon time.Time
+	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&drunid, &dtestid, &dapp, &dspace, &djob, &djobspace, &dimage, &doverallstatus, &dtimeout, &drunon)
+		var run structs.PendingRun
+		err := rows.Scan(&run.RunID, &run.TestID, &run.App, &run.Space, &run.Job, &run.Jobspace, &run.Image, &run.Overallstatus, &run.Timeout, &run.RunOn)
 		if err != nil {
 			fmt.Println(err)
 			return runs, err
 		}
-
-		var run structs.PendingRun
-		run.RunID = drunid
-		run.TestID = dtestid
-		run.App = dapp
-		run.Space = dspace
-		run.Job = djob
-		run.Jobspace = djobspace
-		run.Image = dimage
-		run.Overallstatus = doverallstatus
-		run.Timeout = dtimeout
-		run.RunOn = drunon
 
 		runs = append(runs, run)
 	}
