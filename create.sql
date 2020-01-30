@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS cronjobs(
   job text,
   jobspace text,
   cronspec text,
+  command text,
   CONSTRAINT cronjobs_pk PRIMARY KEY (id)
 );
 
