@@ -2,6 +2,8 @@ package structs
 
 import (
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type Releases []struct {
@@ -930,15 +932,15 @@ type PendingRun struct {
 }
 
 type PendingCronRun struct {
-	RunID         string    `json:"runid"`
-	TestID        string    `json:"testid"`
-	CronID        string    `json:"cronid"`
-	App           string    `json:"app"`
-	Space         string    `json:"space"`
-	Job           string    `json:"job"`
-	Jobspace      string    `json:"jobspace"`
-	Image         string    `json:"image"`
-	Overallstatus string    `json:"overallstatus"`
-	StartTime     time.Time `json:"starttime"`
-	EndTime       time.Time `json:"endtime,omitempty"`
+	RunID         string      `json:"runid"`
+	TestID        string      `json:"testid"`
+	CronID        string      `json:"cronid"`
+	App           string      `json:"app"`
+	Space         string      `json:"space"`
+	Job           string      `json:"job"`
+	Jobspace      string      `json:"jobspace"`
+	Image         string      `json:"image"`
+	Overallstatus string      `json:"overallstatus"`
+	StartTime     time.Time   `json:"starttime"`
+	EndTime       pq.NullTime `json:"endtime,omitempty"`
 }

@@ -314,7 +314,11 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 
 	// Create the job in the database with status of "starting"
 	diagnostic.OverallStatus = "starting"
-	dbstore.StoreRun(diagnostic)
+	if isCron {
+		dbstore.StoreCronRun(diagnostic, time.Now().UTC(), nil, cronjob.ID)
+	} else {
+		dbstore.StoreRun(diagnostic)
+	}
 
 	// Delete any identical old pods that may exist
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
@@ -426,7 +430,11 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			// Update the job in the database to show that the pod is running
 			if status[0].Phase == "Running/running" && status[0].Reason == "" && !updated {
 				diagnostic.OverallStatus = "running"
-				dbstore.UpdateRunStatus(diagnostic)
+				if isCron {
+					dbstore.UpdateCronRun(diagnostic, nil)
+				} else {
+					dbstore.UpdateRunStatus(diagnostic)
+				}
 				updated = true
 			}
 		}
@@ -449,7 +457,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 
 	// Update job in the database with the final status
 	if isCron {
-		err = dbstore.UpdateCronRun(diagnostic)
+		err = dbstore.UpdateCronRun(diagnostic, &endtime)
 	} else {
 		err = dbstore.UpdateRunStatus(diagnostic)
 	}

@@ -1,8 +1,10 @@
 package cronjobs
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	dbstore "taas/dbstore"
 	diagnostics "taas/diagnostics"
 	structs "taas/structs"
@@ -81,6 +83,7 @@ func GetCronjobs(params martini.Params, r render.Render) {
 	}
 	r.JSON(200, newlist)
 }
+
 func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjob, berr binding.Errors, r render.Render) {
 	//TODO: add audit
 
@@ -129,18 +132,27 @@ func addCronjob(req *http.Request, cronjob structs.Cronjob) (e error) {
 
 func DeleteCronjob(req *http.Request, params martini.Params, r render.Render) {
 	id := params["id"]
-	deleteCronjob(req, id)
+	err := deleteCronjob(req, id)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
 	r.JSON(200, map[string]interface{}{"status": "deleted"})
-
 }
 
 func deleteCronjob(req *http.Request, id string) (e error) {
 	cronjob, err := dbstore.GetCronjobByID(id)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return errors.New("The specified cron job does not exist")
+		}
 		fmt.Println(err)
 		return err
 	}
+
 	Cronjob.Remove(jobmap[cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec])
+	delete(jobmap, cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
 	err = dbstore.DeleteCronjob(id)
 	if err != nil {
 		fmt.Println(err)
