@@ -8,7 +8,6 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	uuid "github.com/nu7hatch/gouuid"
 )
 
 var cdb *sql.DB
@@ -137,8 +136,6 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 }
 
 func AddCronJob(cronjob structs.Cronjob) (e error) {
-	iduuid, _ := uuid.NewV4()
-	id := iduuid.String()
 	var stmtstring string = "insert into cronjobs (id, job,  jobspace, cronspec, command) values ($1,$2,$3,$4,$5)"
 
 	stmt, err := cdb.Prepare(stmtstring)
@@ -147,7 +144,7 @@ func AddCronJob(cronjob structs.Cronjob) (e error) {
 		return err
 	}
 
-	_, inserterr := stmt.Exec(id, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec, cronjob.Command)
+	_, inserterr := stmt.Exec(cronjob.ID, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec, cronjob.Command)
 	if inserterr != nil {
 		fmt.Println(inserterr)
 		return inserterr

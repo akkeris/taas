@@ -93,12 +93,16 @@ func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjo
 		return
 	}
 	fmt.Printf("%+v\n", cronjob)
+
+	iduuid, _ := uuid.NewV4()
+	cronjob.ID = iduuid.String()
 	err := addCronjob(req, cronjob)
 	if err != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
 		return
 	}
+
 	err = dbstore.AddCronJob(cronjob)
 	if err != nil {
 		fmt.Println(berr)
