@@ -87,19 +87,11 @@ func GetCronjobRuns(id string, runs string, filter string) (j []structs.CronjobR
 	rows, err := stmt.Query(id)
 	for rows.Next() {
 		var current structs.CronjobRun
-		var starttime time.Time
-		var endtime time.Time
-		var overallstatus string
-		var runid string
-		err := rows.Scan(&starttime, &endtime, &overallstatus, &runid)
+		err := rows.Scan(&current.Starttime, &current.Endtime, &current.Overallstatus, &current.RunID)
 		if err != nil {
 			return cronjobruns, err
 			fmt.Println(err)
 		}
-		current.Starttime = starttime
-		current.Endtime = endtime
-		current.Overallstatus = overallstatus
-		current.RunID = runid
 		cronjobruns = append(cronjobruns, current)
 	}
 	return cronjobruns, nil
