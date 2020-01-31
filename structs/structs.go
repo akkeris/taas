@@ -912,10 +912,10 @@ type Cronjob struct {
 }
 
 type CronjobRun struct {
-	Starttime     time.Time `json:"starttime"`
-	Endtime       time.Time `json:"endtime"`
-	Overallstatus string    `json:"overallstatus"`
-	RunID         string    `json:"runid"`
+	Starttime     time.Time   `json:"starttime"`
+	Endtime       pq.NullTime `json:"endtime"`
+	Overallstatus string      `json:"overallstatus"`
+	RunID         string      `json:"runid"`
 }
 
 type PendingRun struct {
