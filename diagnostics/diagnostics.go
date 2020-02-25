@@ -507,6 +507,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 	var promotestatus string
 	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
+            if isCron != true {
 		transitionfrom := diagnostic.TransitionFrom
 		transitionto := diagnostic.TransitionTo
 		transitiontoa := strings.Split(transitionto, ",")
@@ -546,6 +547,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			fmt.Println(err)
 		}
 		fmt.Println("Promotion finished with status \"" + promotestatus + "\" for job " + diagnostic.RunID)
+            }
 	}
 
 	// Post results to Slack and clean up Kubernetes pod
