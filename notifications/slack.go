@@ -77,6 +77,10 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 		slack.IconEmoji = ":metal:"
 		attachment.Color = "good"
 		attachment.Text = "OK"
+        } else if status == "timedout" {
+                slack.IconEmoji = ":grey_question:"
+                attachment.Color = "warning"
+                attachment.Text = "TIMEDOUT"
 	} else {
 		slack.IconEmoji = ":poop:"
 		attachment.Color = "danger"
