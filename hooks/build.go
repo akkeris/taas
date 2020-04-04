@@ -9,8 +9,6 @@ import (
 	"os"
 	akkeris "taas/jobs"
 	structs "taas/structs"
-
-	vault "github.com/akkeris/vault-client"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
@@ -48,7 +46,7 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 func getBuildInfo(payload structs.BuildPayload) (b structs.BuildInfo, e error) {
 	var buildinfo structs.BuildInfo
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+payload.App.Name+"-"+payload.Space.Name+"/builds/"+payload.Build.ID, nil)
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
 		return buildinfo, err

@@ -24,7 +24,6 @@ import (
 	"text/template"
 	"time"
 
-	vault "github.com/akkeris/vault-client"
 	"github.com/go-martini/martini"
 	_ "github.com/lib/pq"
 	"github.com/martini-contrib/binding"
@@ -99,7 +98,7 @@ func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 	if resp.StatusCode == 401 {
 		req2, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", nil)
 		req2.Header.Add("Content-type", "application/json")
-		req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+		req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 		client2 := http.Client{}
 		resp2, err := client2.Do(req2)
 		if err != nil {
@@ -150,7 +149,7 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 	if resp.StatusCode == 401 {
 		req2, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
 		req2.Header.Add("Content-type", "application/json")
-		req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+                req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 		client2 := http.Client{}
 		resp2, err := client2.Do(req2)
 		if err != nil {
@@ -189,7 +188,7 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 	if resp.StatusCode == 401 {
 		req2, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
 		req.Header.Add("Content-type", "application/json")
-		req2.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+                req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 		client2 := http.Client{}
 		resp2, err := client2.Do(req2)
 		if err != nil {
