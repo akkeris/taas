@@ -6,6 +6,6 @@ WORKDIR /go/src/taas
 ADD . .
 ENV GO111MODULE on
 RUN go build .
-CMD ["./taas"]
+CMD ["./start.sh"]
 EXPOSE 4000
 
