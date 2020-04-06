@@ -13,7 +13,7 @@ import (
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	uuid "github.com/nu7hatch/gouuid"
-	"github.com/robfig/cron"
+        "github.com/robfig/cron/v3"
 )
 
 var Cronjob *cron.Cron

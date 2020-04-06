@@ -11,8 +11,6 @@ import (
 	"os"
 	"strings"
 	structs "taas/structs"
-
-	vault "github.com/akkeris/vault-client"
 	_ "github.com/lib/pq"
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -587,7 +585,7 @@ func CreateHook(active bool, events []string, url string, secret string, app str
 		return err
 	}
 	req.Header.Add("content-type", "application/json")
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

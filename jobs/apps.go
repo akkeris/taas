@@ -8,12 +8,10 @@ import (
 	"net/http"
 	"os"
 	structs "taas/structs"
-
-	vault "github.com/akkeris/vault-client"
 )
 func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec)(r string){
         req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases", nil)
-        req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
         if err != nil {
                 fmt.Println(err)
                 return ""
@@ -46,7 +44,7 @@ func GetVersion(app string, space string, buildid string) (s string, e error) {
 	fmt.Println(buildid)
 
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+app+"-"+space+"/builds/"+buildid, nil)
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
 		return "", err
@@ -82,7 +80,7 @@ func GetVersion(app string, space string, buildid string) (s string, e error) {
 func GetAppControllerOrg(app string) (o string, e error) {
 	var org string
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/v1/apps/"+app, nil)
-	req.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
 		return org, err
@@ -116,8 +114,8 @@ func GetAppControllerOrg(app string) (o string, e error) {
 
 func IsValidSpace(space string) (v bool, e error) {
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/spaces/"+space, nil)
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
-	if err != nil {
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+        if err != nil {
 		fmt.Println(err)
 		return false, err
 	}
@@ -136,7 +134,7 @@ func IsValidSpace(space string) (v bool, e error) {
 
 func IsProtectedSpace(space string) (p bool, err error) {
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/spaces/"+space, nil)
-	req.Header.Add("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println("1")
 		fmt.Println(err)
@@ -175,7 +173,7 @@ func IsProtectedSpace(space string) (p bool, err error) {
 
 func GetHooks(app string) (h []structs.AppHook, e error) {
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+app+"/hooks", nil)
-	req.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -210,7 +208,7 @@ func GetHooks(app string) (h []structs.AppHook, e error) {
 
 func DeleteHook(app string, hookid string) (e error) {
 	req, err := http.NewRequest("DELETE", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+"app"+"/hooks/"+hookid, nil)
-	req.Header.Set("Authorization", vault.GetField(os.Getenv("APP_CONTROLLER_AUTH_SECRET"), "authorization"))
+        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
 		return err

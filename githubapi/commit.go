@@ -9,7 +9,6 @@ import (
 	"strings"
 	structs "taas/structs"
 
-	vault "github.com/akkeris/vault-client"
 )
 
 func GetCommitAuthor(version string) (s string, m string, e error) {
@@ -19,7 +18,7 @@ func GetCommitAuthor(version string) (s string, m string, e error) {
 	newerversion := strings.Replace(newversion, "commit", "commits", -1)
 	fmt.Println(newerversion)
 	req, err := http.NewRequest("GET", newerversion, nil)
-	req.Header.Add("Authorization", "token "+vault.GetField(os.Getenv("GITHUB_TOKEN_SECRET"), "token"))
+	req.Header.Add("Authorization", "token "+os.Getenv("GITHUB_TOKEN"))
 	if err != nil {
 		fmt.Println(err)
 		return "", "", err

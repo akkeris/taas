@@ -12,8 +12,6 @@ import (
 	"strings"
 	structs "taas/structs"
 	"time"
-
-	vault "github.com/akkeris/vault-client"
 	shellwords "github.com/mattn/go-shellwords"
 )
 
@@ -26,9 +24,9 @@ type Response struct {
 
 var kubernetestoken string
 
-// StartClient - Get K8S token from Vault, initialize HTTP client
+// StartClient - Get K8S token, initialize HTTP client
 func StartClient() {
-	kubernetestoken = vault.GetField(os.Getenv("KUBERNETES_TOKEN_SECRET"), "token")
+	kubernetestoken = os.Getenv("KUBERNETES_TOKEN")
 	client = &http.Client{}
 }
 

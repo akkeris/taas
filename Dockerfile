@@ -1,28 +1,11 @@
-FROM golang:1.11-alpine
+FROM golang:1.12-alpine
 RUN apk update
 RUN apk add openssl ca-certificates git build-base
 RUN mkdir -p /go/src/taas
-ADD server.go  /go/src/taas/server.go
-ADD build.sh /build.sh
-RUN chmod +x /build.sh
-ADD notifications /go/src/taas/notifications
-ADD jobs /go/src/taas/jobs
-ADD structs /go/src/taas/structs
-ADD diagnosticlogs /go/src/taas/diagnosticlogs
-ADD diagnostics /go/src/taas/diagnostics
-ADD hooks /go/src/taas/hooks
-ADD pipelines /go/src/taas/pipelines
-ADD githubapi /go/src/taas/githubapi
-ADD dbstore /go/src/taas/dbstore
-ADD artifacts /go/src/taas/artifacts
-ADD auth /go/src/taas/auth
-ADD static /go/src/taas/static
-ADD cronjobs /go/src/taas/cronjobs
-ADD create.sql /go/src/taas/create.sql
-RUN /build.sh
-ADD start.sh /start.sh
-RUN chmod +x /start.sh
-CMD ["/start.sh"]
 WORKDIR /go/src/taas
+ADD . .
+ENV GO111MODULE on
+RUN go build .
+CMD ["./taas"]
 EXPOSE 4000
 
