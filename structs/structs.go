@@ -116,6 +116,7 @@ type ActionSpec struct {
 
 type StepSpec struct {
 	Name    string       `json:"name"`
+        Organization string  `json:org"`
 	Actions []ActionSpec `json:"actions"`
 }
 
