@@ -478,7 +478,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 
 	var step structs.StepSpec
 	step.Name = diagnostic.Job + "-" + diagnostic.JobSpace
-
+        step.Organization = diagnostic.Organization
 	var action structs.ActionSpec
 	action.Name = diagnostic.Job + "-" + diagnostic.JobSpace
 	action.Status = overallstatus
