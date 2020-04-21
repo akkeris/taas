@@ -199,3 +199,4 @@ List of available TaaS commands
   aka taas:runs:output ID                     get logs for a run. If ID is a test name, gets latest
   aka taas:logs ID                            get logs for a run. If ID is a test name, gets latest
   aka taas:runs:rerun ID                      reruns a run
+  
