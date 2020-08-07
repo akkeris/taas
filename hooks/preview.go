@@ -3,6 +3,7 @@ package hooks
 import (
 	"fmt"
 	"os"
+	"strings"
 	"taas/dbstore"
 	diagnostics "taas/diagnostics"
 	githubapi "taas/githubapi"
@@ -21,12 +22,10 @@ func PreviewReleasedHook(previewreleasedhookpayload structs.PreviewReleasedHookS
 		fmt.Println(berr)
 		return
 	}
-        PreviewReleasedHookHandler(previewreleasedhookpayload, false)
+	PreviewReleasedHookHandler(previewreleasedhookpayload, false)
 }
 
-
-
-func PreviewReleasedHookHandler(previewreleasedhookpayload structs.PreviewReleasedHookSpec, isCron bool){
+func PreviewReleasedHookHandler(previewreleasedhookpayload structs.PreviewReleasedHookSpec, isCron bool) {
 	diagnosticslist, err := diagnostics.GetDiagnostics(previewreleasedhookpayload.Space.Name, previewreleasedhookpayload.App.Name, "preview-released", "succeeded")
 	if err != nil {
 		fmt.Println(err)
@@ -44,7 +43,7 @@ func PreviewReleasedHookHandler(previewreleasedhookpayload structs.PreviewReleas
 		element.Organization = org
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-		diagnostics.RunDiagnostic(element,isCron,structs.Cronjob{})
+		diagnostics.RunDiagnostic(element, isCron, structs.Cronjob{})
 	}
 }
 
@@ -97,6 +96,18 @@ func PreviewCreatedHook(previewcreatedhookpayload structs.PreviewCreatedHookSpec
 		}
 	}
 	diagnostic.Env = newenv
+
+	// Get all preview sites for the preview app and provide them as an environment variable
+	var domains []string
+	for _, site := range previewcreatedhookpayload.Sites {
+		domains = append(domains, site.Domain)
+	}
+
+	var sitesenv structs.EnvironmentVariable
+	sitesenv.Name = "PREVIEW_SITES"
+	sitesenv.Value = strings.Join(domains, ",")
+
+	diagnostic.Env = append(diagnostic.Env, sitesenv)
 
 	// Create diagnostic
 	err = akkeris.CreateConfigSet(diagnostic)
