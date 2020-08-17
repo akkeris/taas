@@ -879,18 +879,18 @@ type PreviewCreatedHookSpec struct {
 			Postdeploy         interface{}   `json:"postdeploy"`
 			ResolvedSuccessURL interface{}   `json:"resolved_success_url"`
 		} `json:"app_setup"`
+		Sites []struct {
+			ID     string `json:"id"`
+			Domain string `json:"domain"`
+			Region struct {
+				Name string `json:"name"`
+				ID   string `json:"id"`
+			} `json:"region"`
+			CreatedAt  time.Time     `json:"created_at"`
+			UpdatedAt  time.Time     `json:"updated_at"`
+			Compliance []interface{} `json:"compliance"`
+		} `json:"sites"`
 	} `json:"preview"`
-	Sites []struct {
-		ID     string `json:"id"`
-		Domain string `json:"domain"`
-		Region struct {
-			Name string `json:"name"`
-			ID   string `json:"id"`
-		} `json:"region"`
-		CreatedAt  time.Time     `json:"created_at"`
-		UpdatedAt  time.Time     `json:"updated_at"`
-		Compliance []interface{} `json:"compliance"`
-	} `json:"sites"`
 }
 
 type DestroyHookSpec struct {

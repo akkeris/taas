@@ -99,7 +99,7 @@ func PreviewCreatedHook(previewcreatedhookpayload structs.PreviewCreatedHookSpec
 
 	// Get all preview sites for the preview app and provide them as an environment variable
 	var domains []string
-	for _, site := range previewcreatedhookpayload.Sites {
+	for _, site := range previewcreatedhookpayload.Preview.Sites {
 		domains = append(domains, site.Domain)
 	}
 
