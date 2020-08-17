@@ -115,9 +115,9 @@ type ActionSpec struct {
 }
 
 type StepSpec struct {
-	Name    string       `json:"name"`
-        Organization string  `json:org"`
-	Actions []ActionSpec `json:"actions"`
+	Name         string       `json:"name"`
+	Organization string       `json:org"`
+	Actions      []ActionSpec `json:"actions"`
 }
 
 type ResultSpec struct {
@@ -176,6 +176,7 @@ type EnvironmentVariable struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
+
 type DiagnosticSpec struct {
 	ID             string                `json:"id"`
 	Space          string                `json:"space"`
@@ -204,6 +205,7 @@ type DiagnosticSpec struct {
 	TestPreviews   bool                  `json:"testpreviews"` // Run diagnostic on the app's preview apps
 	IsPreview      bool                  `json:"ispreview"`    // This diagnostic is for a preview app
 	Token          string                `json:"token"`
+	WebhookURLs    string                `json:"webhookurls"` // Comma-separated list of webhook URLs to notify with test results
 }
 
 type DiagnosticSpecAudit struct {

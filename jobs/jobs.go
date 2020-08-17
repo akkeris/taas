@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	structs "taas/structs"
+
 	_ "github.com/lib/pq"
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -23,7 +24,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	defer db.Close()
 	fmt.Println(diagnosticspec.Slackchannel)
-	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8,testpreviews=$9 where job=$10 and jobspace=$11")
+	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8,testpreviews=$9,webhookurls=$10 where job=$11 and jobspace=$12")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -32,7 +33,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
 		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews,
-		diagnosticspec.Job, diagnosticspec.JobSpace,
+		diagnosticspec.WebhookURLs, diagnosticspec.Job, diagnosticspec.JobSpace,
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -59,12 +60,13 @@ func CreateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 
 	var id string
 	inserterr := db.QueryRow(
-		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command,testpreviews,ispreview) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) returning id;",
+		"INSERT INTO diagnostics(id, space, app, action, result, job, jobspace,image,pipelinename,transitionfrom,transitionto,timeout,startdelay,slackchannel,command,testpreviews,ispreview,webhookurls) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) returning id;",
 		diagnosticspec.ID, diagnosticspec.Space, diagnosticspec.App, diagnosticspec.Action,
 		diagnosticspec.Result, diagnosticspec.Job, diagnosticspec.JobSpace,
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
 		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews, diagnosticspec.IsPreview,
+		diagnosticspec.WebhookURLs,
 	).Scan(&id)
 	if inserterr != nil {
 		return inserterr
@@ -585,7 +587,7 @@ func CreateHook(active bool, events []string, url string, secret string, app str
 		return err
 	}
 	req.Header.Add("content-type", "application/json")
-        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+	req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

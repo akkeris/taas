@@ -80,6 +80,19 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronjob struc
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
 
+	// These environment variables tell the test suite that it is running in Akkeris CI
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "AKKERIS_CI"
+	newvar.Varvalue = "true"
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
+
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "CI"
+	newvar.Varvalue = "true"
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
+
 	go check(diagnostic, isCron, cronjob)
 	return nil
 }
@@ -149,7 +162,7 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 	if resp.StatusCode == 401 {
 		req2, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
 		req2.Header.Add("Content-type", "application/json")
-                req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+		req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 		client2 := http.Client{}
 		resp2, err := client2.Do(req2)
 		if err != nil {
@@ -188,7 +201,7 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 	if resp.StatusCode == 401 {
 		req2, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
 		req.Header.Add("Content-type", "application/json")
-                req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+		req2.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 		client2 := http.Client{}
 		resp2, err := client2.Do(req2)
 		if err != nil {
@@ -478,7 +491,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 
 	var step structs.StepSpec
 	step.Name = diagnostic.Job + "-" + diagnostic.JobSpace
-        step.Organization = diagnostic.Organization
+	step.Organization = diagnostic.Organization
 	var action structs.ActionSpec
 	action.Name = diagnostic.Job + "-" + diagnostic.JobSpace
 	action.Status = overallstatus
@@ -506,51 +519,52 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 	var promotestatus string
 	promotestatus = "failed"
 	if overallstatus == "success" && diagnostic.PipelineName != "manual" {
-            if isCron != true {
-		transitionfrom := diagnostic.TransitionFrom
-		transitionto := diagnostic.TransitionTo
-		transitiontoa := strings.Split(transitionto, ",")
-		fmt.Println("Promoting " + transitionfrom + " to " + transitionto + " for job " + diagnostic.RunID)
+		if isCron != true {
+			transitionfrom := diagnostic.TransitionFrom
+			transitionto := diagnostic.TransitionTo
+			transitiontoa := strings.Split(transitionto, ",")
+			fmt.Println("Promoting " + transitionfrom + " to " + transitionto + " for job " + diagnostic.RunID)
 
-		var fromappid string
-		var toappids []string
-		var pipelineid string
-		pipeline, err := pipelines.GetPipeline(diagnostic.PipelineName)
-		if err != nil {
-			fmt.Println(err)
-		}
-		for _, element := range pipeline {
-			if element.Stage+":"+element.App.Name == transitionfrom {
-				fromappid = element.App.ID
-				pipelineid = element.Pipeline.ID
+			var fromappid string
+			var toappids []string
+			var pipelineid string
+			pipeline, err := pipelines.GetPipeline(diagnostic.PipelineName)
+			if err != nil {
+				fmt.Println(err)
 			}
-			for _, trelement := range transitiontoa {
-				if element.Stage+":"+element.App.Name == trelement {
-					toappids = append(toappids, element.App.ID)
+			for _, element := range pipeline {
+				if element.Stage+":"+element.App.Name == transitionfrom {
+					fromappid = element.App.ID
+					pipelineid = element.Pipeline.ID
+				}
+				for _, trelement := range transitiontoa {
+					if element.Stage+":"+element.App.Name == trelement {
+						toappids = append(toappids, element.App.ID)
+					}
 				}
 			}
-		}
-		var promotion structs.PromotionSpec
-		var targets []structs.Target
+			var promotion structs.PromotionSpec
+			var targets []structs.Target
 
-		for _, appid := range toappids {
-			var target structs.Target
-			target.App.ID = appid
-			targets = append(targets, target)
+			for _, appid := range toappids {
+				var target structs.Target
+				target.App.ID = appid
+				targets = append(targets, target)
+			}
+			promotion.Targets = targets
+			promotion.Pipeline.ID = pipelineid
+			promotion.Source.App.ID = fromappid
+			promotestatus, err = pipelines.PromoteApp(promotion)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println("Promotion finished with status \"" + promotestatus + "\" for job " + diagnostic.RunID)
 		}
-		promotion.Targets = targets
-		promotion.Pipeline.ID = pipelineid
-		promotion.Source.App.ID = fromappid
-		promotestatus, err = pipelines.PromoteApp(promotion)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println("Promotion finished with status \"" + promotestatus + "\" for job " + diagnostic.RunID)
-            }
 	}
 
-	// Post results to Slack and clean up Kubernetes pod
+	// Post results to Slack & any webhooks, and clean up Kubernetes pod
 	notifications.PostToSlack(diagnostic, overallstatus, promotestatus, isCron)
+	notifications.PostWebhooks(diagnostic, overallstatus, promotestatus, isCron, result)
 	akkeris.Deletepod(oneoff.Space, oneoff.Podname)
 	return
 }
@@ -590,7 +604,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay,slackchannel,coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false), coalesce(webhookurls,null,'') from diagnostics where space = $1 and app = $2 and action = $3 and result=$4")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -612,11 +626,12 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 	var dcommand string
 	var dtestpreviews bool
 	var dispreview bool
+	var dwebhookurls string
 
 	defer stmt.Close()
 	rows, err := stmt.Query(space, app, action, result)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview, &dwebhookurls)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -639,6 +654,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		diagnostic.Command = dcommand
 		diagnostic.TestPreviews = dtestpreviews
 		diagnostic.IsPreview = dispreview
+		diagnostic.WebhookURLs = dwebhookurls
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -847,7 +863,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		return diagnostics, dberr
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics order by app, space")
+	stmt, err := db.Prepare("select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false), coalesce(webhookurls,null,'') from diagnostics order by app, space")
 	if err != nil {
 		fmt.Println(err)
 		return diagnostics, err
@@ -870,11 +886,12 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 	var dcommand string
 	var dtestpreviews bool
 	var dispreview bool
+	var dwebhookurls string
 
 	defer stmt.Close()
 	rows, err := stmt.Query()
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview, &dwebhookurls)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostics, err
@@ -897,6 +914,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		diagnostic.Command = dcommand
 		diagnostic.TestPreviews = dtestpreviews
 		diagnostic.IsPreview = dispreview
+		diagnostic.WebhookURLs = dwebhookurls
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
 		fmt.Println(runid)
@@ -999,10 +1017,15 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 		return
 	}
 	for _, element := range envvars {
+		// System environment variables
+		if (element.Name == "AKKERIS_CI") || (element.Name == "CI") {
+			continue
+		}
 		if (strings.HasPrefix(element.Name, "TAAS_")) || (strings.HasPrefix(element.Name, "DIAGNOSTIC_")) {
 			continue
 		}
 
+		// Redact protected variables
 		if protectedspace && ((strings.Contains(element.Name, "SECRET")) || (strings.Contains(element.Name, "PASSWORD")) || (strings.Contains(element.Name, "TOKEN")) || (strings.Contains(element.Name, "KEY"))) {
 			var newvar structs.EnvironmentVariable
 			newvar.Name = element.Name
