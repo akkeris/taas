@@ -24,12 +24,14 @@ CREATE TABLE IF NOT EXISTS diagnostics (
     command text,
     testpreviews boolean,
     ispreview boolean,
+    webhookurls text,
     CONSTRAINT diagnostics_space_app_result_action_job_jobspace_key UNIQUE (space, app, result, action, job, jobspace)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS diagnostics_pkey ON diagnostics(id text_ops);
 ALTER TABLE diagnostics ADD COLUMN IF NOT EXISTS command TEXT;
 ALTER TABLE diagnostics ADD COLUMN IF NOT EXISTS testpreviews BOOLEAN;
 ALTER TABLE diagnostics ADD COLUMN IF NOT EXISTS ispreview BOOLEAN;
+ALTER TABLE diagnostics ADD COLUMN IF NOT EXISTS webhookurls TEXT;
 
 CREATE TABLE IF NOT EXISTS promotions (
     id text NOT NULL,

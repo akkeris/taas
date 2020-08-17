@@ -225,21 +225,21 @@ func isUUID(uuid string) bool {
 }
 
 func FindPreviewParentDiagnostic(app string) (d structs.DiagnosticSpec, e error) {
-	var selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where app||'-'||space = $1 and testpreviews = true"
+	var selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false), coalesce(webhookurls,null,'') from diagnostics where app||'-'||space = $1 and testpreviews = true"
 	return findDiagnostic(app, selectstring)
 }
 
 func FindDiagnosticByApp(app string) (d structs.DiagnosticSpec, e error) {
-	var selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where app||'-'||space = $1"
+	var selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false), coalesce(webhookurls,null,'') from diagnostics where app||'-'||space = $1"
 	return findDiagnostic(app, selectstring)
 }
 
 func FindDiagnostic(provided string) (d structs.DiagnosticSpec, e error) {
 	var selectstring string
 	if !isUUID(provided) {
-		selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where job||'-'||jobspace = $1"
+		selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false), coalesce(webhookurls,null,'') from diagnostics where job||'-'||jobspace = $1"
 	} else {
-		selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false) from diagnostics where id = $1"
+		selectstring = "select id, space, app, action, result, job, jobspace, image, pipelinename, transitionfrom, transitionto, timeout, startdelay, slackchannel, coalesce(command,null,''), coalesce(testpreviews,null,false), coalesce(ispreview,null,false), coalesce(webhookurls,null,'') from diagnostics where id = $1"
 	}
 	return findDiagnostic(provided, selectstring)
 }
@@ -277,11 +277,12 @@ func findDiagnostic(input string, selectstring string) (d structs.DiagnosticSpec
 	var dcommand string
 	var dtestpreviews bool
 	var dispreview bool
+	var dwebhookurls string
 
 	defer stmt.Close()
 	rows, err := stmt.Query(input)
 	for rows.Next() {
-		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview)
+		err := rows.Scan(&did, &dspace, &dapp, &daction, &dresult, &djob, &djobspace, &dimage, &dpipelinename, &dtransitionfrom, &dtransitionto, &dtimeout, &dstartdelay, &dslackchannel, &dcommand, &dtestpreviews, &dispreview, &dwebhookurls)
 		if err != nil {
 			fmt.Println(err)
 			return diagnostic, err
@@ -303,6 +304,7 @@ func findDiagnostic(input string, selectstring string) (d structs.DiagnosticSpec
 		diagnostic.Command = dcommand
 		diagnostic.TestPreviews = dtestpreviews
 		diagnostic.IsPreview = dispreview
+		diagnostic.WebhookURLs = dwebhookurls
 		//runiduuid, _ := uuid.NewV4()
 		//runid := runiduuid.String()
 		//fmt.Println(runid)
