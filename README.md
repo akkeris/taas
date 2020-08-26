@@ -87,13 +87,20 @@ Notes:
 * The configuration of preview diagnostics can be edited just like normal diagnostics
 * Preview diagnostics will automatically be removed once the preview app is destroyed
 * Preview diagnostics will receive the same configuration and environment variables as the parent diagnostic
-* TaaS can inject the URL of the preview app into an environment variable. This is useful because each preview app has a dynamically generated name, which means unpredictable URLs.
-  * The special environment variable `PREVIEW_URL_VAR` should be set to the name of the environment variable that you wish to replace.
-  * Say you have an environment variable, `MY_ENV_VAR`, which contains the URL of your target app (`https://my-app.mydomain`):
-    1. In your parent diagnostic that has preview tests enabled, set `PREVIEW_URL_VAR` to the value `"MY_ENV_VAR"`
-    2. Create a new preview app, which will cause TaaS to create a preview diagnostic
-    3. When running the preview diagnostic, TaaS changes the value of `MY_ENV_VAR` to `http://<preview-app-name>.<preview-app-space>.svc.cluster.local`
 
+### Dynamic Preview App URL
+
+A dynamic URL is generated for each preview app. This value will need to be passed to your tests in order for them to be able to target the preview app. TaaS accomplishes this by injecting the URL into an environment variable of your choosing. On the **source** diagnostic, create a new environment variable named `PREVIEW_URL_VAR` and assign it the value of the name of the environment variable you want the preview app URL to be set to.
+
+For example, say you have
+1. an app named `my-app-stage` with preview apps enabled
+1. a diagnostic set up to run tests against it named `my-app-stage-taas` with the `testpreviews` property set to `true`
+1. an environment variable within your test suite named `MY_APP_HOST` that is assigned the host URL of your app (e.g. `https://my-app.my-company.io`)
+
+Then the following command will inject the environment variable `MY_APP_HOST="https://<dynamic-preview-app-URL>` on all future preview app diagnostics.
+```
+aka taas:config:set my-app-stage-taas PREVIEW_URL_VAR="MY_APP_HOST"
+```
 
 ## **Configure Akkeris TaaS**
 
