@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	structs "taas/structs"
+	"taas/utils"
 	"time"
 )
 
@@ -36,9 +37,9 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 	var slack Slack
 	testframework := strings.ToUpper(strings.Split(strings.Replace(diagnostic.Image, "quay.octanner.io/developer/", "", -1), ":")[0])
 
-	fmt.Println("********************************")
-	fmt.Println(testframework)
-	fmt.Println("********************************")
+	utils.PrintDebug("********************************")
+	utils.PrintDebug(testframework)
+	utils.PrintDebug("********************************")
 	if diagnostic.Slackchannel != "" {
 		slack.Channel = diagnostic.Slackchannel
 	}
@@ -66,7 +67,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 	if diagnostic.GithubVersion != "" {
 		slack.Text = slack.Text + "<" + diagnostic.GithubVersion + "|Commit>  "
 	}
-	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&releaseid="+diagnostic.ReleaseID + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
+	slack.Text = slack.Text + "<" + os.Getenv("RERUN_URL") + "?space=" + diagnostic.Space + "&app=" + diagnostic.App + "&action=" + diagnostic.Action + "&result=" + diagnostic.Result + "&releaseid=" + diagnostic.ReleaseID + "&buildid=" + diagnostic.BuildID + "|Rerun>\n"
 	slack.Text = slack.Text + "Changes Made by: @" + diagnostic.CommitAuthor
 	slack.UnfurlLinks = false
 	slack.UnfurlMedia = false
@@ -77,10 +78,10 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 		slack.IconEmoji = ":metal:"
 		attachment.Color = "good"
 		attachment.Text = "OK"
-        } else if status == "timedout" {
-                slack.IconEmoji = ":grey_question:"
-                attachment.Color = "warning"
-                attachment.Text = "TIMEDOUT"
+	} else if status == "timedout" {
+		slack.IconEmoji = ":grey_question:"
+		attachment.Color = "warning"
+		attachment.Text = "TIMEDOUT"
 	} else {
 		slack.IconEmoji = ":poop:"
 		attachment.Color = "danger"
@@ -97,7 +98,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 		fmt.Println(err)
 
 	}
-	fmt.Println(slack.Text)
+	utils.PrintDebug(slack.Text)
 	if os.Getenv("ENABLE_SLACK_NOTIFICATIONS") == "true" {
 		req, err := http.NewRequest("POST", slackurl, bytes.NewBuffer(p))
 		if err != nil {
@@ -111,10 +112,10 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 		}
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
-                if !isCron{ 
-	        	PostPromoteToSlack(diagnostic, status, promotestatus)
-                }
+		utils.PrintDebug(string(bodybytes))
+		if !isCron {
+			PostPromoteToSlack(diagnostic, status, promotestatus)
+		}
 	}
 	if os.Getenv("ENABLE_DEBUG_SLACK_NOTIFICATIONS") == "true" {
 		debugslackurl := os.Getenv("DEBUG_SLACK_NOTIFICATION_URL")
@@ -130,7 +131,7 @@ func PostToSlack(diagnostic structs.DiagnosticSpec, status string, promotestatus
 		}
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 	}
 }
 
@@ -175,7 +176,7 @@ func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string, promot
 		fmt.Println(err)
 
 	}
-	fmt.Println(slack.Text)
+	utils.PrintDebug(slack.Text)
 
 	if os.Getenv("ENABLE_SLACK_NOTIFICATIONS") == "true" {
 		req, err := http.NewRequest("POST", slackurl, bytes.NewBuffer(p))
@@ -190,7 +191,7 @@ func PostPromoteToSlack(diagnostic structs.DiagnosticSpec, status string, promot
 		}
 		defer resp.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 	}
 
 }

@@ -9,6 +9,7 @@ import (
 	githubapi "taas/githubapi"
 	akkeris "taas/jobs"
 	structs "taas/structs"
+	"taas/utils"
 
 	uuid "github.com/nu7hatch/gouuid"
 
@@ -55,7 +56,7 @@ func PreviewCreatedHook(previewcreatedhookpayload structs.PreviewCreatedHookSpec
 		return
 	}
 
-	fmt.Println("Starting to create diagnostic...")
+	utils.PrintDebug("Starting to create diagnostic...")
 
 	diagnostic, err := dbstore.FindPreviewParentDiagnostic(previewcreatedhookpayload.App.Name + "-" + previewcreatedhookpayload.Space.Name)
 	if err != nil || diagnostic.ID == "" {
@@ -127,7 +128,7 @@ func PreviewCreatedHook(previewcreatedhookpayload structs.PreviewCreatedHookSpec
 		fmt.Println(err)
 	}
 
-	fmt.Println("Diagnostic " + diagnostic.Job + " created for " + previewcreatedhookpayload.Preview.AppSetup.App.Name + "-" + previewcreatedhookpayload.Space.Name)
+	utils.PrintDebug("Diagnostic " + diagnostic.Job + " created for " + previewcreatedhookpayload.Preview.AppSetup.App.Name + "-" + previewcreatedhookpayload.Space.Name)
 
 	// Add destroy hook- clean up diagnostic once preview app is deleted
 	err = akkeris.CreateHook(true, []string{"destroy"}, os.Getenv("TAAS_SVC_URL")+"/v1/previewdestroyhook", "merpderp", previewcreatedhookpayload.Preview.App.Name)

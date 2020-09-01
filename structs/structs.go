@@ -908,8 +908,9 @@ type Cronjob struct {
 	ID       string    `json:"id"`
 	Job      string    `json:"job"`
 	Jobspace string    `json:"jobspace"`
-	Cronspec string    `json:"cs"`
+	Cronspec string    `json:"cronspec"`
 	Command  string    `json:"command"`
+	Disabled bool      `json:"disabled"`
 	Prev     time.Time `json:"prev"`
 	Next     time.Time `json:"next"`
 }

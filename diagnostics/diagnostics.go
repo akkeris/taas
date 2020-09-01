@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"regexp"
 	"strconv"
@@ -21,6 +22,7 @@ import (
 	notifications "taas/notifications"
 	pipelines "taas/pipelines"
 	structs "taas/structs"
+	"taas/utils"
 	"text/template"
 	"time"
 
@@ -120,11 +122,11 @@ func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 		}
 		defer resp2.Body.Close()
 		bodybytes, err = ioutil.ReadAll(resp2.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 	} else {
 		defer resp.Body.Close()
 		bodybytes, err = ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 	}
 	var statuses structs.Statuses
 	var statusid string
@@ -134,7 +136,7 @@ func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 		return "", err
 	}
 	for _, status := range statuses.Statuses {
-		fmt.Println(status.ID)
+		utils.PrintDebug(status.ID)
 		if status.Context == "taas/"+diagnostic.Job+"-"+diagnostic.JobSpace {
 			statusid = status.ID
 		}
@@ -148,7 +150,7 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
+	utils.PrintDebug("SETTING STATUS CHECK: " + releasestatus.State)
 	req, err := http.NewRequest("PATCH", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses/"+statusid, bytes.NewBuffer(p))
 	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
@@ -171,12 +173,12 @@ func updateStatusCheck(statusid string, releasestatus structs.ReleaseStatus, dia
 		}
 		defer resp2.Body.Close()
 		bodybytes, err = ioutil.ReadAll(resp2.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 		return nil
 	} else {
 		defer resp.Body.Close()
 		bodybytes, err = ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 		return nil
 	}
 }
@@ -187,7 +189,7 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println("SETTING STATUS CHECK: " + releasestatus.State)
+	utils.PrintDebug("SETTING STATUS CHECK: " + releasestatus.State)
 	req, err := http.NewRequest("POST", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases/"+diagnostic.ReleaseID+"/statuses", bytes.NewBuffer(p))
 	req.Header.Add("Authorization", "Bearer "+diagnostic.Token)
 	req.Header.Add("Content-type", "application/json")
@@ -210,12 +212,12 @@ func createStatusCheck(releasestatus structs.ReleaseStatus, diagnostic structs.D
 		}
 		defer resp2.Body.Close()
 		bodybytes, err := ioutil.ReadAll(resp2.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 		return nil
 	} else {
 		defer resp.Body.Close()
 		bodybytes, err = ioutil.ReadAll(resp.Body)
-		fmt.Println(string(bodybytes))
+		utils.PrintDebug(string(bodybytes))
 		return nil
 	}
 }
@@ -232,7 +234,7 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("Updating status: " + statusid)
+		utils.PrintDebug("Updating status: " + statusid)
 		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
 	}
 	if status == "pending" {
@@ -244,7 +246,7 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("Updating status: " + statusid)
+		utils.PrintDebug("Updating status: " + statusid)
 		releasestatus.Context = ""
 		updateStatusCheck(statusid, releasestatus, diagnostic, loglink)
 	}
@@ -278,8 +280,14 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		setStatusCheck("pending", diagnostic, "")
 	}
 
+	if isCron {
+		fmt.Println("\n[" + diagnostic.RunID + "]: Starting cron job for " + diagnostic.Job + "-" + diagnostic.JobSpace + " (cronid: " + cronjob.ID + ")")
+	} else {
+		fmt.Println("\n[" + diagnostic.RunID + "]: Starting job for " + diagnostic.Job + "-" + diagnostic.JobSpace)
+	}
+
 	// Delay start of job according to the configured start delay
-	fmt.Println("Job " + diagnostic.RunID + " start delay set to : " + strconv.Itoa(diagnostic.Startdelay))
+	utils.PrintDebug("Job " + diagnostic.RunID + " start delay set to : " + strconv.Itoa(diagnostic.Startdelay))
 	time.Sleep(time.Second * time.Duration(diagnostic.Startdelay))
 
 	// Configure the Kubernetes pod
@@ -293,7 +301,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		oneoff.Image = currentimage
 		diagnostic.Image = currentimage
 	} else {
-		fmt.Println("assuming docker image url")
+		utils.PrintDebug("assuming docker image url")
 		oneoff.Image = diagnostic.Image
 	}
 	oneoff.Command = diagnostic.Command
@@ -349,7 +357,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 	var i float64
 
 	if err != nil {
-		fmt.Println("JOB " + diagnostic.RunID + " FAILED: unable to start pod")
+		utils.PrintDebug("JOB " + diagnostic.RunID + " FAILED: unable to start pod")
 		overallstatus = "failed"
 		endtime = time.Now().UTC()
 		loglines.Logs = append(loglines.Logs, "Message: Unable to start tests")
@@ -389,15 +397,15 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 				return
 			}
 			if len(status) > 1 {
-				fmt.Println("JOB " + diagnostic.RunID + " FAILED")
+				utils.PrintDebug("JOB " + diagnostic.RunID + " FAILED")
 				overallstatus = "failed"
 				endtime = time.Now().UTC()
 				for _, element := range status {
 					if element.Reason == "Error" || element.Phase == "Running/terminated" || element.Phase == "Failed/terminated" {
-						fmt.Println(element.Instanceid)
+						utils.PrintDebug(element.Instanceid)
 						instance = element.Instanceid
-						fmt.Println(element.Phase)
-						fmt.Println(element.Reason)
+						utils.PrintDebug(element.Phase)
+						utils.PrintDebug(element.Reason)
 					}
 				}
 				break
@@ -407,33 +415,33 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			}
 			instance = status[0].Instanceid
 			if status[0].Phase == "Succeeded/terminated" && status[0].Reason == "Completed" {
-				fmt.Println("JOB FINISHED OK")
+				utils.PrintDebug("JOB FINISHED OK")
 				overallstatus = "success"
 				endtime = time.Now().UTC()
 				break
 			}
 
 			if status[0].Phase == "Running/terminated" && status[0].Reason == "Error" {
-				fmt.Println("JOB FAILED")
+				utils.PrintDebug("JOB FAILED")
 				overallstatus = "failed"
 				endtime = time.Now().UTC()
 				break
 			}
 
 			if status[0].Phase == "Running/waiting" && status[0].Reason == "CrashLoopBackOff" {
-				fmt.Println("JOB FAILED")
+				utils.PrintDebug("JOB FAILED")
 				overallstatus = "failed"
 				endtime = time.Now().UTC()
 				break
 			}
 			if status[0].Phase == "Failed/terminated" && status[0].Reason == "Error" {
-				fmt.Println("JOB FAILED")
+				utils.PrintDebug("JOB FAILED")
 				overallstatus = "failed"
 				endtime = time.Now().UTC()
 				break
 			}
 			if status[0].Phase == "Failed/terminated" && status[0].Reason == "ContainerCannotRun" {
-				fmt.Println("JOB FAILED")
+				utils.PrintDebug("JOB FAILED")
 				overallstatus = "failed"
 				endtime = time.Now().UTC()
 				break
@@ -452,7 +460,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		}
 	}
 
-	fmt.Println("Finishing job " + diagnostic.RunID + "...")
+	fmt.Println("[" + diagnostic.RunID + "]: Finishing job for " + diagnostic.Job + "-" + diagnostic.JobSpace)
 
 	// Store logs
 	logs, err := jobs.GetTestLogs(diagnostic.JobSpace, diagnostic.Job, instance)
@@ -477,7 +485,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 		fmt.Println(err)
 	}
 
-	fmt.Println("Job " + diagnostic.RunID + " finished with status: \"" + overallstatus + "\"")
+	fmt.Println("[" + diagnostic.RunID + "]: Job finished with status \"" + overallstatus + "\"")
 
 	// Notify postback URL
 	var result structs.ResultSpec
@@ -523,7 +531,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			transitionfrom := diagnostic.TransitionFrom
 			transitionto := diagnostic.TransitionTo
 			transitiontoa := strings.Split(transitionto, ",")
-			fmt.Println("Promoting " + transitionfrom + " to " + transitionto + " for job " + diagnostic.RunID)
+			utils.PrintDebug("Promoting " + transitionfrom + " to " + transitionto + " for job " + diagnostic.RunID)
 
 			var fromappid string
 			var toappids []string
@@ -558,7 +566,7 @@ func check(diagnostic structs.DiagnosticSpec, isCron bool, cronjob structs.Cronj
 			if err != nil {
 				fmt.Println(err)
 			}
-			fmt.Println("Promotion finished with status \"" + promotestatus + "\" for job " + diagnostic.RunID)
+			utils.PrintDebug("Promotion finished with status \"" + promotestatus + "\" for job " + diagnostic.RunID)
 		}
 	}
 
@@ -590,7 +598,7 @@ func scaleToZero(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	return nil
 
@@ -657,7 +665,7 @@ func GetDiagnostics(space string, app string, action string, result string) (d [
 		diagnostic.WebhookURLs = dwebhookurls
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
-		fmt.Println(runid)
+		utils.PrintDebug(runid)
 		diagnostic.RunID = runid
 		diagnostics = append(diagnostics, diagnostic)
 	}
@@ -917,7 +925,7 @@ func getDiagnosticsList(simple string) (d []structs.DiagnosticSpec, e error) {
 		diagnostic.WebhookURLs = dwebhookurls
 		runiduuid, _ := uuid.NewV4()
 		runid := runiduuid.String()
-		fmt.Println(runid)
+		utils.PrintDebug(runid)
 		diagnostic.RunID = runid
 		if !(simple == "true") {
 			envvars, _ := akkeris.GetVars(djob, djobspace)
@@ -937,12 +945,12 @@ func Rerun(req *http.Request, params martini.Params, r render.Render) {
 	qs := req.URL.Query()
 	space, app, action, result, releaseid, buildid := qs.Get("space"), qs.Get("app"), qs.Get("action"), qs.Get("result"), qs.Get("releaseid"), qs.Get("buildid")
 
-	fmt.Println(space)
-	fmt.Println(app)
-	fmt.Println(action)
-	fmt.Println(result)
-	fmt.Println(buildid)
-	fmt.Println(releaseid)
+	utils.PrintDebug(space)
+	utils.PrintDebug(app)
+	utils.PrintDebug(action)
+	utils.PrintDebug(result)
+	utils.PrintDebug(buildid)
+	utils.PrintDebug(releaseid)
 	err := rerun(space, app, action, result, buildid, releaseid)
 	if err != nil {
 		fmt.Println(err)
@@ -964,7 +972,7 @@ func rerun(space string, app string, action string, result string, buildid strin
 			fmt.Println(err)
 			return err
 		}
-		fmt.Println(version)
+		utils.PrintDebug(version)
 		var commitauthor string
 		var commitmessage string
 		if version != "" {
@@ -973,7 +981,7 @@ func rerun(space string, app string, action string, result string, buildid strin
 			if err != nil {
 				fmt.Println(err)
 			}
-			fmt.Println(commitauthor)
+			utils.PrintDebug(commitauthor)
 		} else {
 			commitauthor = "none"
 			commitmessage = "none"
@@ -982,14 +990,14 @@ func rerun(space string, app string, action string, result string, buildid strin
 		element.CommitMessage = commitmessage
 		element.ReleaseID = releaseid
 		if element.ReleaseID == "" {
-			fmt.Println("release id not received.  Getting most recent")
+			utils.PrintDebug("release id not received.  Getting most recent")
 			element.ReleaseID = dbstore.GetMostRecentReleaseID(element)
 		}
 		if element.ReleaseID == "" {
-			fmt.Println("release id not available in database.  Getting from controller")
+			utils.PrintDebug("release id not available in database.  Getting from controller")
 			element.ReleaseID = akkeris.GetMostRecentReleaseID(element)
 		}
-		fmt.Println("RELEASE ID : " + element.ReleaseID)
+		utils.PrintDebug("RELEASE ID : " + element.ReleaseID)
 		RunDiagnostic(element, false, structs.Cronjob{})
 	}
 	return nil
@@ -1048,8 +1056,8 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid request"})
 		return
 	}
-	fmt.Println(provided)
-	fmt.Println(spec)
+	utils.PrintDebug(provided)
+	utils.PrintDebug(spec)
 	diagnostic, err := dbstore.FindDiagnostic(provided)
 
 	if err != nil {
@@ -1061,8 +1069,8 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
-	fmt.Println(diagnostic.Job)
-	fmt.Println(diagnostic.JobSpace)
+	utils.PrintDebug(diagnostic.Job)
+	utils.PrintDebug(diagnostic.JobSpace)
 	var bind structs.Bindspec
 	bind.App = diagnostic.Job
 	bind.Space = diagnostic.JobSpace
@@ -1096,7 +1104,7 @@ func BindDiagnosticSecret(params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	r.JSON(200, map[string]interface{}{"response": "secret added"})
 }
 
@@ -1107,8 +1115,8 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid request"})
 		return
 	}
-	fmt.Println(provided)
-	fmt.Println(spec)
+	utils.PrintDebug(provided)
+	utils.PrintDebug(spec)
 	diagnostic, err := dbstore.FindDiagnostic(provided)
 
 	if err != nil {
@@ -1120,8 +1128,8 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
 		return
 	}
-	fmt.Println(diagnostic.Job)
-	fmt.Println(diagnostic.JobSpace)
+	utils.PrintDebug(diagnostic.Job)
+	utils.PrintDebug(diagnostic.JobSpace)
 	var bind structs.Bindspec
 	bind.App = diagnostic.Job
 	bind.Space = diagnostic.JobSpace
@@ -1137,7 +1145,10 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 		fmt.Println(err)
 	}
 	req.Header.Add("Content-type", "application/json")
-	fmt.Println(req)
+
+	requestDump, _ := httputil.DumpRequest(req, false)
+	utils.PrintDebug(string(requestDump))
+
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1148,7 +1159,7 @@ func UnbindDiagnosticSecret(params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	r.JSON(200, map[string]interface{}{"response": "secret removed"})
 
 }
@@ -1207,12 +1218,12 @@ func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec
 		r.JSON(500, map[string]interface{}{"response": err})
 	}
 	if diagnostic.ID != "" {
-		fmt.Println("valid test")
+		utils.PrintDebug("valid test")
 	} else {
 		r.JSON(400, map[string]interface{}{"response": "bad request - test does not exist"})
 	}
 	varspec.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
-	fmt.Println(varspec)
+	utils.PrintDebug(varspec.Setname + ": " + varspec.Varname + "=" + varspec.Varvalue)
 	existing, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
 	var exists bool
 	exists = false
@@ -1224,7 +1235,7 @@ func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec
 	}
 	if exists {
 		//update
-		fmt.Println("Updating")
+		utils.PrintDebug("Updating")
 		err = akkeris.UpdateVar(varspec)
 		if err != nil {
 			fmt.Println(err)
@@ -1232,7 +1243,7 @@ func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec
 			return
 		}
 	} else {
-		fmt.Println("Adding")
+		utils.PrintDebug("Adding")
 		err = akkeris.AddVar(varspec)
 		if err != nil {
 			fmt.Println(err)
@@ -1248,8 +1259,8 @@ func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec
 func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 	varname := params["varname"]
 	provided := params["provided"]
-	fmt.Println(varname)
-	fmt.Println(provided)
+	utils.PrintDebug(varname)
+	utils.PrintDebug(provided)
 	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
@@ -1338,7 +1349,9 @@ Events:
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
 	err = t.Execute(wr, templatepod)
-	fmt.Println(err)
+	if err != nil {
+		utils.PrintDebug(err.Error())
+	}
 	wr.Flush()
 
 	artifacts.UploadToS3(string(b.Bytes()), "text/plain", runid)

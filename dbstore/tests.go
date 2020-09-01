@@ -6,6 +6,7 @@ import (
 	"regexp"
 	akkeris "taas/jobs"
 	structs "taas/structs"
+	"taas/utils"
 
 	"encoding/json"
 	"encoding/xml"
@@ -66,7 +67,7 @@ func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec) (r string) {
 }
 
 func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
-	fmt.Println("Storing run " + diagnostic.RunID + " with status " + diagnostic.OverallStatus)
+	utils.PrintDebug("Storing run " + diagnostic.RunID + " with status " + diagnostic.OverallStatus)
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -94,7 +95,7 @@ func StoreRun(diagnostic structs.DiagnosticSpec) (e error) {
 }
 
 func UpdateRunStatus(diagnostic structs.DiagnosticSpec) (e error) {
-	fmt.Println("Updating run " + diagnostic.RunID + " with status " + diagnostic.OverallStatus)
+	utils.PrintDebug("Updating run " + diagnostic.RunID + " with status " + diagnostic.OverallStatus)
 	uri := os.Getenv("DIAGNOSTICDB")
 	db, dberr := sql.Open("postgres", uri)
 	if dberr != nil {
@@ -114,7 +115,7 @@ func UpdateRunStatus(diagnostic structs.DiagnosticSpec) (e error) {
 func StoreBits(req *http.Request, params martini.Params, r render.Render) {
 	runid := params["runid"]
 	format := req.URL.Query().Get("format")
-	fmt.Println(format)
+	utils.PrintDebug(format)
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		fmt.Println(err)

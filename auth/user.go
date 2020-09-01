@@ -2,12 +2,13 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	structs "taas/structs"
-        "fmt"
+	"taas/utils"
 )
 
 func GetUser(req *http.Request) (u string, e error) {
@@ -17,7 +18,7 @@ func GetUser(req *http.Request) (u string, e error) {
 		return "nouser", err
 	}
 	req.Header.Set("Authorization", authheader)
-        req.Header.Add("Accept", "application/json")
+	req.Header.Add("Accept", "application/json")
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -33,14 +34,16 @@ func GetUser(req *http.Request) (u string, e error) {
 	if err != nil {
 		return "nouser", err
 	}
-fmt.Println("*************************************USER********************************")
-fmt.Printf("%+v\n", user)
-fmt.Println("*************************************USER********************************")
-        if user.Email != "" {
-	   return user.Email, nil
-        }
-        if user.Cn != "" {
-           return user.Cn, nil
-        }
-        return "nouser", nil
+
+	utils.PrintDebug("*************************************USER********************************")
+	userstr := fmt.Sprintf("%+v\n", user)
+	utils.PrintDebug(userstr)
+	utils.PrintDebug("*************************************USER********************************")
+	if user.Email != "" {
+		return user.Email, nil
+	}
+	if user.Cn != "" {
+		return user.Cn, nil
+	}
+	return "nouser", nil
 }

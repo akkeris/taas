@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	structs "taas/structs"
+	"taas/utils"
 )
 
 func PostResults(result structs.ResultSpec) (e error) {
@@ -21,7 +22,7 @@ func PostResults(result structs.ResultSpec) (e error) {
 		postbackurl := os.Getenv("POSTBACKURL")
 		postbacks := strings.Split(postbackurl, ",")
 		for _, postback := range postbacks {
-			fmt.Println("Posting to " + postback)
+			utils.PrintDebug("Posting to " + postback)
 			req, err := http.NewRequest("POST", postback, bytes.NewBuffer(p))
 			if err != nil {
 				fmt.Println(err)
@@ -40,8 +41,8 @@ func PostResults(result structs.ResultSpec) (e error) {
 				fmt.Println(err)
 				return err
 			}
-			fmt.Println("Response body from postback: " + string(bodybytes))
-			fmt.Println("Response code from postback: " + resp.Status)
+			utils.PrintDebug("Response body from postback: " + string(bodybytes))
+			utils.PrintDebug("Response code from postback: " + resp.Status)
 		}
 	}
 	return nil

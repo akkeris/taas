@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	structs "taas/structs"
+	"taas/utils"
 	"time"
 
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -88,8 +90,8 @@ func GetCronjobRuns(id string, runs string, filter string) (j []structs.CronjobR
 		var current structs.CronjobRun
 		err := rows.Scan(&current.Starttime, &current.Endtime, &current.Overallstatus, &current.RunID)
 		if err != nil {
-			return cronjobruns, err
 			fmt.Println(err)
+			return cronjobruns, err
 		}
 		cronjobruns = append(cronjobruns, current)
 	}
@@ -128,7 +130,7 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 }
 
 func AddCronJob(cronjob structs.Cronjob) (e error) {
-	var stmtstring string = "insert into cronjobs (id, job,  jobspace, cronspec, command) values ($1,$2,$3,$4,$5)"
+	var stmtstring string = "insert into cronjobs (id, job, jobspace, cronspec, command, disabled) values ($1,$2,$3,$4,$5,$6)"
 
 	stmt, err := cdb.Prepare(stmtstring)
 	if err != nil {
@@ -136,7 +138,7 @@ func AddCronJob(cronjob structs.Cronjob) (e error) {
 		return err
 	}
 
-	_, inserterr := stmt.Exec(cronjob.ID, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec, cronjob.Command)
+	_, inserterr := stmt.Exec(cronjob.ID, cronjob.Job, cronjob.Jobspace, cronjob.Cronspec, cronjob.Command, cronjob.Disabled)
 	if inserterr != nil {
 		fmt.Println(inserterr)
 		return inserterr
@@ -146,8 +148,50 @@ func AddCronJob(cronjob structs.Cronjob) (e error) {
 
 func GetCronjobByID(id string) (c structs.Cronjob, e error) {
 	var cronjob structs.Cronjob
+	var err error
 
-	err := cdb.QueryRow("select id, job, jobspace, cronspec from cronjobs where id = $1", id).Scan(&cronjob.ID, &cronjob.Job, &cronjob.Jobspace, &cronjob.Cronspec)
+	if os.Getenv("ENABLE_CRON_WORKER") != "" {
+		query := `
+			SELECT
+			cronjobs.id AS id,
+			cronjobs.job AS job,
+			cronjobs.jobspace AS jobspace,
+			cronjobs.cronspec AS cronspec,
+			coalesce(cronjobs.command, null, '') AS command,
+			cronjobs.disabled AS disabled,
+			coalesce(cronjobschedule.next, null, '') AS next,
+			coalesce(cronjobschedule.prev, null, '') AS prev
+		FROM cronjobs
+			LEFT JOIN cronjobschedule ON cronjobschedule.id = cronjobs.id
+		WHERE cronjobs.id = $1
+		`
+		var next string
+		var prev string
+
+		err = cdb.QueryRow(query, id).Scan(&cronjob.ID, &cronjob.Job, &cronjob.Jobspace, &cronjob.Cronspec, &cronjob.Command, &cronjob.Disabled, &next, &prev)
+		if err != nil {
+			fmt.Println(err)
+			return cronjob, err
+		}
+
+		if next != "" {
+			cronjob.Next, err = time.Parse(time.RFC3339, next)
+			if err != nil {
+				fmt.Println("Could not parse next run time for " + cronjob.Job + "-" + cronjob.Jobspace)
+			}
+		}
+
+		if prev != "" {
+			cronjob.Prev, err = time.Parse(time.RFC3339, prev)
+			if err != nil {
+				fmt.Println("Could not parse last run time for " + cronjob.Job + "-" + cronjob.Jobspace)
+			}
+		}
+		err = nil
+	} else {
+		err = cdb.QueryRow("select id, job, jobspace, cronspec from cronjobs where id = $1", id).Scan(&cronjob.ID, &cronjob.Job, &cronjob.Jobspace, &cronjob.Cronspec)
+	}
+
 	if err != nil {
 		fmt.Println(err)
 		return cronjob, err
@@ -172,7 +216,7 @@ func DeleteCronjob(id string) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(affect)
+	utils.PrintDebug(affect)
 
 	return nil
 }
@@ -197,4 +241,123 @@ func GetCurrentCronRuns() (r []structs.PendingCronRun, e error) {
 	}
 
 	return runs, nil
+}
+
+// UpdateCronjob currently only updates the disabled toggle
+func UpdateCronjob(id string, disabled bool) (e error) {
+	query := "update cronjobs set disabled = $2 where id = $1"
+	_, err := cdb.Exec(query, id, disabled)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateListener creates a new Postgres listener for the database
+func CreateListener() *pq.Listener {
+	reportProblem := func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}
+	return pq.NewListener(os.Getenv("DIAGNOSTICDB"), 10*time.Second, time.Minute, reportProblem)
+}
+
+// InsertCronScheduleEntry inserts an entry into the cron scheduler status table
+func InsertCronScheduleEntry(id string, next time.Time, prev time.Time) error {
+	query := "insert into cronjobschedule(id, next, prev) values($1, $2, $3)"
+
+	nextBytes, _ := next.MarshalText()
+	prevBytes, _ := prev.MarshalText()
+
+	_, err := cdb.Exec(query, id, string(nextBytes), string(prevBytes))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteCronScheduleEntry deletes an entry from the cron scheduler status table
+func DeleteCronScheduleEntry(id string) error {
+	query := "delete from cronjobschedule where id = $1"
+	_, err := cdb.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteAllCronScheduleEntries wipes the cron scheduler status table
+func DeleteAllCronScheduleEntries() error {
+	_, err := cdb.Exec("delete from cronjobschedule")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetCronjobsWithSchedule gets cronjob information along with the current scheduled status
+func GetCronjobsWithSchedule() ([]structs.Cronjob, error) {
+	var entries []structs.Cronjob
+
+	rows, err := db.Query(`
+		SELECT
+			cronjobs.id AS id,
+			cronjobs.job AS job,
+			cronjobs.jobspace AS jobspace,
+			cronjobs.cronspec AS cronspec,
+			coalesce(cronjobs.command, null, '') AS command,
+			cronjobs.disabled AS disabled,
+			coalesce(cronjobschedule.next, null, '') AS next,
+			coalesce(cronjobschedule.prev, null, '') AS prev
+		FROM cronjobs
+			LEFT JOIN cronjobschedule ON cronjobschedule.id = cronjobs.id
+	`)
+	if err != nil {
+		fmt.Println(err)
+		return entries, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var entry structs.Cronjob
+		var next string
+		var prev string
+		err := rows.Scan(&entry.ID, &entry.Job, &entry.Jobspace, &entry.Cronspec, &entry.Command, &entry.Disabled, &next, &prev)
+		if err != nil {
+			fmt.Println(err)
+			return entries, err
+		}
+
+		if next != "" {
+			entry.Next, err = time.Parse(time.RFC3339, next)
+			if err != nil {
+				fmt.Println("Could not parse next run time for " + entry.Job + "-" + entry.Jobspace)
+			}
+		}
+
+		if prev != "" {
+			entry.Prev, err = time.Parse(time.RFC3339, prev)
+			if err != nil {
+				fmt.Println("Could not parse last run time for " + entry.Job + "-" + entry.Jobspace)
+			}
+		}
+
+		entries = append(entries, entry)
+	}
+	return entries, nil
+}
+
+// UpdateCronScheduleEntry updates the cron schedule status for a given job
+func UpdateCronScheduleEntry(id string, next time.Time, prev time.Time) error {
+	query := "update cronjobschedule set next = $2, prev = $3 where id = $1"
+
+	nextBytes, _ := next.MarshalText()
+	prevBytes, _ := prev.MarshalText()
+
+	_, err := cdb.Exec(query, id, string(nextBytes), string(prevBytes))
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -9,4 +9,3 @@ RUN go build .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
 EXPOSE 4000
-

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	structs "taas/structs"
+	"taas/utils"
 
 	"database/sql"
 	"net/http"
@@ -81,7 +82,7 @@ func AddDiagnosticDeleteAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5,$6)"
 
@@ -112,7 +113,7 @@ func AddDiagnosticCreateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	diagnosticaudit.Timeout = diagnostic.Timeout
 	diagnosticaudit.Startdelay = diagnostic.Startdelay
 	diagnosticaudit.Slackchannel = diagnostic.Slackchannel
-        diagnosticaudit.Command = diagnostic.Command
+	diagnosticaudit.Command = diagnostic.Command
 	audituuid, _ := uuid.NewV4()
 	auditid := audituuid.String()
 	user, err := auth.GetUser(req)
@@ -123,7 +124,7 @@ func AddDiagnosticCreateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5, $6)"
 
@@ -149,7 +150,7 @@ func AddDiagnosticUpdateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	diagnosticaudit.Timeout = diagnostic.Timeout
 	diagnosticaudit.Startdelay = diagnostic.Startdelay
 	diagnosticaudit.Slackchannel = diagnostic.Slackchannel
-        diagnosticaudit.Command = diagnostic.Command
+	diagnosticaudit.Command = diagnostic.Command
 	audituuid, _ := uuid.NewV4()
 	auditid := audituuid.String()
 	user, err := auth.GetUser(req)
@@ -160,7 +161,7 @@ func AddDiagnosticUpdateAudit(req *http.Request, diagnostic structs.DiagnosticSp
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey, newvalue) values ($1,$2,$3,$4,$5,$6)"
 
@@ -222,44 +223,42 @@ func GetAudits(params martini.Params, r render.Render) {
 	r.JSON(200, audits)
 }
 
-
 func AddCronjobDeleteAudit(req *http.Request, id string, cronjob structs.Cronjob) {
-        audituuid, _ := uuid.NewV4()
-        auditid := audituuid.String()
-        user, err := auth.GetUser(req)
-        if err != nil {
-                fmt.Println(err)
-        }
-        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
+	audituuid, _ := uuid.NewV4()
+	auditid := audituuid.String()
+	user, err := auth.GetUser(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
 
-        stmt, err := db.Prepare(stmtstring)
-        if err != nil {
-                db.Close()
-        }
+	stmt, err := db.Prepare(stmtstring)
+	if err != nil {
+		db.Close()
+	}
 
-        _, inserterr := stmt.Exec(auditid, id, user, "cronjobdestroy", cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
-        if inserterr != nil {
-                fmt.Println(inserterr)
-        }
+	_, inserterr := stmt.Exec(auditid, id, user, "cronjobdestroy", cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
+	if inserterr != nil {
+		fmt.Println(inserterr)
+	}
 }
 
 func AddCronjobCreateAudit(req *http.Request, id string, cronjob structs.Cronjob) {
-        audituuid, _ := uuid.NewV4()
-        auditid := audituuid.String()
-        user, err := auth.GetUser(req)
-        if err != nil {
-                fmt.Println(err)
-        }
-        var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
+	audituuid, _ := uuid.NewV4()
+	auditid := audituuid.String()
+	user, err := auth.GetUser(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var stmtstring string = "insert into audits (auditid,  id, audituser, audittype, auditkey) values ($1,$2,$3,$4,$5)"
 
-        stmt, err := db.Prepare(stmtstring)
-        if err != nil {
-                db.Close()
-        }
+	stmt, err := db.Prepare(stmtstring)
+	if err != nil {
+		db.Close()
+	}
 
-        _, inserterr := stmt.Exec(auditid, id, user, "cronjobcreate", cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
-        if inserterr != nil {
-                fmt.Println(inserterr)
-        }
+	_, inserterr := stmt.Exec(auditid, id, user, "cronjobcreate", cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
+	if inserterr != nil {
+		fmt.Println(inserterr)
+	}
 }
-
