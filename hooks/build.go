@@ -22,7 +22,8 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 		fmt.Println(berr)
 		return
 	}
-	spew.Dump(payload)
+	utils.PrintDebug(spew.Sdump(payload))
+
 	if payload.Build.Result != "pending" {
 		buildinfo, err := getBuildInfo(payload)
 		if err != nil {
@@ -36,7 +37,7 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 			fmt.Println(err)
 		}
 		buildinfo.Organization = org
-		spew.Dump(buildinfo)
+		utils.PrintDebug(spew.Sdump(buildinfo))
 		err = writeBuildOutputES(buildinfo)
 		if err != nil {
 			fmt.Println(err)
@@ -82,7 +83,7 @@ func writeBuildOutputES(buildinfo structs.BuildInfo) error {
 	buildessend.Status = buildinfo.Status
 	buildessend.UpdatedAt = buildinfo.UpdatedAt
 	buildessend.Organization = buildinfo.Organization
-	spew.Dump(buildessend)
+	utils.PrintDebug(spew.Sdump(buildessend))
 	p, err := json.Marshal(buildessend)
 	if err != nil {
 		fmt.Println(err)

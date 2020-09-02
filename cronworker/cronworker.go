@@ -181,7 +181,6 @@ func addCronjob(cronjob structs.Cronjob) (e error) {
 func deleteCronjob(oldRecord structs.Cronjob) {
 	// Disabled jobs won't be in the scheduler
 	if oldRecord.Disabled {
-		fmt.Println("[cron_worker]: An unscheduled job was removed from the database (" + oldRecord.ID + ")")
 		return
 	}
 	fmt.Println("[cron_worker]: Removing cronjob " + oldRecord.Job + "-" + oldRecord.Jobspace + " (" + oldRecord.ID + ")")

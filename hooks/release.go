@@ -59,7 +59,7 @@ func ReleaseHookHandler(req *http.Request, releasehookpayload structs.ReleaseHoo
 		element.Organization = org
 		element.CommitAuthor = commitauthor
 		element.CommitMessage = commitmessage
-		spew.Dump(element)
+		utils.PrintDebug(spew.Sdump(element))
 		diagnostics.RunDiagnostic(element, isCron, structs.Cronjob{})
 	}
 

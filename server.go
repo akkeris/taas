@@ -15,6 +15,7 @@ import (
 	hooks "taas/hooks"
 	jobs "taas/jobs"
 	structs "taas/structs"
+	"taas/utils"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -97,7 +98,7 @@ func main() {
 		dbstore.FindCronOrphans()
 	}
 
-	m := martini.Classic()
+	m := utils.CreateClassicMartini()
 	m.Use(render.Renderer())
 	m.Post("/v1/releasehook", binding.Json(structs.ReleaseHookSpec{}), hooks.ReleaseHook)
 	m.Post("/v1/buildhook", binding.Json(structs.BuildPayload{}), hooks.BuildHook)

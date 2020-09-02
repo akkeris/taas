@@ -112,7 +112,7 @@ func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjo
 	if os.Getenv("ENABLE_CRON_WORKER") == "" {
 		err := addCronjob(req, cronjob)
 		if err != nil {
-			fmt.Println(berr)
+			fmt.Println(err)
 			r.JSON(500, map[string]interface{}{"response": err.Error()})
 			return
 		}
@@ -120,7 +120,7 @@ func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjo
 
 	err := dbstore.AddCronJob(cronjob)
 	if err != nil {
-		fmt.Println(berr)
+		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
 		return
 	}
@@ -128,11 +128,16 @@ func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjo
 }
 
 func addCronjob(req *http.Request, cronjob structs.Cronjob) (e error) {
+	if cronjob.Cronspec == "" {
+		return errors.New("Cronspec must be provided")
+	}
+
 	diagnostic, err := dbstore.FindDiagnostic(cronjob.Job + "-" + cronjob.Jobspace)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+
 	runiduuid, _ := uuid.NewV4()
 	runid := runiduuid.String()
 	diagnostic.RunID = runid
