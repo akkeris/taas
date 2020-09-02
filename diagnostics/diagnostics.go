@@ -817,6 +817,7 @@ func UpdateDiagnostic(req *http.Request, diagnosticspec structs.DiagnosticSpec, 
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
+		return
 	}
 
 	err := updateDiagnostic(diagnosticspec)
@@ -857,6 +858,7 @@ func GetDiagnosticsList(req *http.Request, params martini.Params, r render.Rende
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	r.JSON(200, diagnostics)
 
@@ -955,6 +957,7 @@ func Rerun(req *http.Request, params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	r.JSON(200, map[string]interface{}{"status": "rerunning"})
 
@@ -1011,6 +1014,7 @@ func GetDiagnosticByNameOrID(params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	if diagnostic.ID == "" {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
@@ -1208,20 +1212,25 @@ func IsValidTest(test string) (v bool, e error) {
 }
 
 func SetConfig(req *http.Request, params martini.Params, varspec structs.Varspec, berr binding.Errors, r render.Render) {
-
 	if berr != nil {
 		fmt.Println(berr)
 		r.JSON(500, map[string]interface{}{"response": berr})
+		return
 	}
+
 	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
+
 	if diagnostic.ID != "" {
 		utils.PrintDebug("valid test")
 	} else {
 		r.JSON(400, map[string]interface{}{"response": "bad request - test does not exist"})
+		return
 	}
+
 	varspec.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
 	utils.PrintDebug(varspec.Setname + ": " + varspec.Varname + "=" + varspec.Varvalue)
 	existing, err := akkeris.GetVars(diagnostic.Job, diagnostic.JobSpace)
@@ -1264,13 +1273,16 @@ func UnsetConfig(req *http.Request, params martini.Params, r render.Render) {
 	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	if diagnostic.ID == "" {
 		r.JSON(400, map[string]interface{}{"response": "bad request - test does not exist"})
+		return
 	}
 	err = akkeris.DeleteVar(diagnostic, varname)
 	if err != nil {
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	dbstore.AddConfigUnsetAudit(req, diagnostic.ID, varname)
 	r.JSON(200, map[string]interface{}{"response": "config variable unset"})
@@ -1284,6 +1296,7 @@ func CreateHooks(params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	if diagnostic.ID == "" {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
@@ -1369,12 +1382,14 @@ func GetCurrentRuns(req *http.Request, params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 
 	cronRuns, err := dbstore.GetCurrentCronRuns()
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 
 	var resp AllPendingRuns

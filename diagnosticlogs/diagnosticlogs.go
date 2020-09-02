@@ -276,6 +276,7 @@ func GetRuns(params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
 	}
 	r.JSON(200, runlist)
 }
@@ -391,6 +392,7 @@ func TailLogs(w http.ResponseWriter, req *http.Request, params martini.Params, r
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	if diagnostic.ID == "" {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})
