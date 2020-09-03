@@ -9,5 +9,5 @@ if [[ -n "$1" && "$1" == "cron" ]]
 then
     /go/src/taas/taas --cron_worker
 else
-   /go/src/taas
+   /go/src/taas/taas
 fi
