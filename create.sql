@@ -128,8 +128,10 @@ CREATE TABLE IF NOT EXISTS cronjobs(
   jobspace text,
   cronspec text,
   command text,
+  disabled BOOLEAN DEFAULT false,
   CONSTRAINT cronjobs_pk PRIMARY KEY (id)
 );
+ALTER TABLE cronjobs ADD COLUMN IF NOT EXISTS disabled BOOLEAN;
 
 CREATE TABLE IF NOT EXISTS cronruns(
   testid text,
@@ -145,7 +147,51 @@ CREATE TABLE IF NOT EXISTS cronruns(
   cronid text
 );
 
+CREATE TABLE IF NOT EXISTS cronjobschedule(
+  id text NOT NULL,
+  next text,
+  prev text
+);
 
+-- Function to listen to events (for cronjobs)
+-- https://coussej.github.io/2015/09/15/Listening-to-generic-JSON-notifications-from-PostgreSQL-in-Go/
+CREATE OR REPLACE FUNCTION notify_event() RETURNS TRIGGER AS $f$
+
+    DECLARE 
+        data json;
+        notification json;
+
+    BEGIN
+    
+        -- Convert the old or new row to JSON, based on the kind of action.
+        IF (TG_OP = 'DELETE') THEN
+            data = json_build_object('old_record', row_to_json(OLD));
+        ELSIF (TG_OP = 'INSERT') THEN
+            data = json_build_object('new_record', row_to_json(NEW));
+        ELSE
+            data = json_build_object('old_record', row_to_json(OLD), 'new_record', row_to_json(NEW));
+        END IF;
+        
+        -- Contruct the notification as a JSON string.
+        notification = json_build_object(
+                          'table', TG_TABLE_NAME,
+                          'action', TG_OP,
+                          'data', data);
+        
+        -- Execute pg_notify(channel, notification)
+        PERFORM pg_notify('events',notification::text);
+        
+        -- Result is ignored since this is an AFTER trigger
+        RETURN NULL; 
+    END;
+    
+$f$ LANGUAGE plpgsql;
+
+-- Create trigger to send events if cronjob table changes
+DROP TRIGGER IF EXISTS cronjobs_notify_event ON cronjobs;
+CREATE TRIGGER cronjobs_notify_event
+AFTER INSERT OR UPDATE OR DELETE ON cronjobs
+    FOR EACH ROW EXECUTE PROCEDURE notify_event();
 
 END
 $$;

@@ -9,6 +9,8 @@ import (
 	"os"
 	akkeris "taas/jobs"
 	structs "taas/structs"
+	"taas/utils"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
@@ -20,7 +22,8 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 		fmt.Println(berr)
 		return
 	}
-	spew.Dump(payload)
+	utils.PrintDebug(spew.Sdump(payload))
+
 	if payload.Build.Result != "pending" {
 		buildinfo, err := getBuildInfo(payload)
 		if err != nil {
@@ -34,7 +37,7 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 			fmt.Println(err)
 		}
 		buildinfo.Organization = org
-		spew.Dump(buildinfo)
+		utils.PrintDebug(spew.Sdump(buildinfo))
 		err = writeBuildOutputES(buildinfo)
 		if err != nil {
 			fmt.Println(err)
@@ -46,7 +49,7 @@ func BuildHook(payload structs.BuildPayload, berr binding.Errors, r render.Rende
 func getBuildInfo(payload structs.BuildPayload) (b structs.BuildInfo, e error) {
 	var buildinfo structs.BuildInfo
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+payload.App.Name+"-"+payload.Space.Name+"/builds/"+payload.Build.ID, nil)
-        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+	req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
 		return buildinfo, err
@@ -57,10 +60,10 @@ func getBuildInfo(payload structs.BuildPayload) (b structs.BuildInfo, e error) {
 		fmt.Println(err)
 		return buildinfo, err
 	}
-	fmt.Println(resp.Status)
+	utils.PrintDebug(resp.Status)
 	defer resp.Body.Close()
 	bb, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(bb))
+	utils.PrintDebug(string(bb))
 	if err != nil {
 		fmt.Println(err)
 		return buildinfo, err
@@ -80,7 +83,7 @@ func writeBuildOutputES(buildinfo structs.BuildInfo) error {
 	buildessend.Status = buildinfo.Status
 	buildessend.UpdatedAt = buildinfo.UpdatedAt
 	buildessend.Organization = buildinfo.Organization
-	spew.Dump(buildessend)
+	utils.PrintDebug(spew.Sdump(buildessend))
 	p, err := json.Marshal(buildessend)
 	if err != nil {
 		fmt.Println(err)
@@ -105,7 +108,7 @@ func writeBuildOutputES(buildinfo structs.BuildInfo) error {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	return nil
 }

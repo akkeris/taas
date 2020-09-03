@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
+	"strconv"
 	"strings"
 	structs "taas/structs"
+	"taas/utils"
 
 	_ "github.com/lib/pq"
 	uuid "github.com/nu7hatch/gouuid"
@@ -23,7 +26,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(dberr)
 	}
 	defer db.Close()
-	fmt.Println(diagnosticspec.Slackchannel)
+	utils.PrintDebug(diagnosticspec.Slackchannel)
 	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8,testpreviews=$9,webhookurls=$10 where job=$11 and jobspace=$12")
 	if err != nil {
 		fmt.Println(err)
@@ -45,7 +48,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(rowCnt)
+	utils.PrintDebug(rowCnt)
 	return nil
 }
 
@@ -113,7 +116,7 @@ func CreateBind(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 }
 
@@ -153,7 +156,7 @@ func CreateConfigSet(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 }
 
@@ -231,7 +234,7 @@ func CreateVariables(diagnosticspec structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 }
 
@@ -264,7 +267,7 @@ func UpdateVar(vartoadd structs.Varspec) error {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	return nil
 }
@@ -301,7 +304,7 @@ func AddVar(vartoadd structs.Varspec) error {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	return nil
 }
@@ -316,7 +319,8 @@ func DeleteVar(diagnosticspec structs.DiagnosticSpec, varname string) error {
 	}
 	req.Header.Add("Content-type", "application/json")
 	client := http.Client{}
-	fmt.Println(req)
+	requestDump, _ := httputil.DumpRequest(req, false)
+	utils.PrintDebug(string(requestDump))
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -328,7 +332,7 @@ func DeleteVar(diagnosticspec structs.DiagnosticSpec, varname string) error {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 
 	return nil
 }
@@ -357,7 +361,7 @@ func DeleteService(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(affect)
+	utils.PrintDebug(strconv.FormatInt(affect, 10))
 
 	db.Close()
 
@@ -387,7 +391,7 @@ func DeleteBind(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 
 }
@@ -415,7 +419,7 @@ func DeleteSet(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 
 }
@@ -441,7 +445,7 @@ func DeleteJob(diagnostic structs.DiagnosticSpec) (e error) {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 
 }
@@ -517,12 +521,12 @@ func CreateHooks(appspace string) (e error) {
 		return errors.New("One or more hooks failed to create: " + strings.Join(failedHooks, ","))
 	}
 
-	fmt.Println("All hooks present!")
+	utils.PrintDebug("All hooks present!")
 	return nil
 }
 
 func CreatePreviewHooks(appspace string) (e error) {
-	fmt.Println("Creating preview hooks...")
+	utils.PrintDebug("Creating preview hooks...")
 	svcurl := os.Getenv("TAAS_SVC_URL")
 	var failedHooks []string
 
@@ -564,7 +568,7 @@ func CreatePreviewHooks(appspace string) (e error) {
 		return errors.New("One or more hooks failed to create: " + strings.Join(failedHooks, ","))
 	}
 
-	fmt.Println("All preview hooks present!")
+	utils.PrintDebug("All preview hooks present!")
 	return nil
 }
 
@@ -598,12 +602,12 @@ func CreateHook(active bool, events []string, url string, secret string, app str
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return nil
 }
 
 func DeletePreviewHooks(appspace string) (e error) {
-	fmt.Println("Deleting preview hooks...")
+	utils.PrintDebug("Deleting preview hooks...")
 	svcurl := os.Getenv("TAAS_SVC_URL")
 
 	hooks, err := GetHooks(appspace)

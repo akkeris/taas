@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	dbstore "taas/dbstore"
 	diagnostics "taas/diagnostics"
@@ -13,7 +14,7 @@ import (
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	uuid "github.com/nu7hatch/gouuid"
-        "github.com/robfig/cron/v3"
+	"github.com/robfig/cron/v3"
 )
 
 var Cronjob *cron.Cron
@@ -70,6 +71,17 @@ func GetCronjobRuns(req *http.Request, params martini.Params, r render.Render) {
 }
 
 func GetCronjobs(params martini.Params, r render.Render) {
+	if os.Getenv("ENABLE_CRON_WORKER") != "" {
+		cronjobs, err := dbstore.GetCronjobsWithSchedule()
+		if err != nil {
+			fmt.Println(err)
+			r.JSON(500, map[string]interface{}{"response": err})
+			return
+		}
+		r.JSON(200, cronjobs)
+		return
+	}
+
 	var cronjobs []structs.Cronjob
 	var newlist []structs.Cronjob
 	cronjobs, err := dbstore.GetCronjobs()
@@ -92,20 +104,23 @@ func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjo
 		r.JSON(500, map[string]interface{}{"response": berr})
 		return
 	}
-	fmt.Printf("%+v\n", cronjob)
 
 	iduuid, _ := uuid.NewV4()
 	cronjob.ID = iduuid.String()
-	err := addCronjob(req, cronjob)
-	if err != nil {
-		fmt.Println(berr)
-		r.JSON(500, map[string]interface{}{"response": err.Error()})
-		return
+
+	// Not using cron worker. Add to internal cron scheduler
+	if os.Getenv("ENABLE_CRON_WORKER") == "" {
+		err := addCronjob(req, cronjob)
+		if err != nil {
+			fmt.Println(err)
+			r.JSON(500, map[string]interface{}{"response": err.Error()})
+			return
+		}
 	}
 
-	err = dbstore.AddCronJob(cronjob)
+	err := dbstore.AddCronJob(cronjob)
 	if err != nil {
-		fmt.Println(berr)
+		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
 		return
 	}
@@ -113,11 +128,16 @@ func AddCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjo
 }
 
 func addCronjob(req *http.Request, cronjob structs.Cronjob) (e error) {
+	if cronjob.Cronspec == "" {
+		return errors.New("Cronspec must be provided")
+	}
+
 	diagnostic, err := dbstore.FindDiagnostic(cronjob.Job + "-" + cronjob.Jobspace)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+
 	runiduuid, _ := uuid.NewV4()
 	runid := runiduuid.String()
 	diagnostic.RunID = runid
@@ -155,8 +175,12 @@ func deleteCronjob(req *http.Request, id string) (e error) {
 		return err
 	}
 
-	Cronjob.Remove(jobmap[cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec])
-	delete(jobmap, cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
+	// Not using cron worker. Remove from internal scheduler
+	if os.Getenv("ENABLE_CRON_WORKER") == "" {
+		Cronjob.Remove(jobmap[cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec])
+		delete(jobmap, cronjob.Job+"-"+cronjob.Jobspace+"-"+cronjob.Cronspec)
+	}
+
 	err = dbstore.DeleteCronjob(id)
 	if err != nil {
 		fmt.Println(err)
@@ -169,4 +193,57 @@ func deleteCronjob(req *http.Request, id string) (e error) {
 	}
 	dbstore.AddCronjobDeleteAudit(req, diagnostic.ID, cronjob)
 	return nil
+}
+
+// UpdateCronjob updates the configuration for a cronjob
+func UpdateCronjob(req *http.Request, params martini.Params, cronjob structs.Cronjob, berr binding.Errors, r render.Render) {
+	if berr != nil {
+		fmt.Println(berr)
+		r.JSON(500, map[string]interface{}{"response": berr})
+		return
+	}
+
+	err := updateCronjob(req, params["id"], cronjob)
+	if err != nil {
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+
+	r.JSON(200, map[string]interface{}{"status": "updated"})
+}
+
+// updateCronjob currently only handles updates to disabled toggle (maintenance mode)
+func updateCronjob(req *http.Request, id string, cronjob structs.Cronjob) (e error) {
+	oldJob, err := dbstore.GetCronjobByID(id)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return errors.New("The specified cron job does not exist")
+		}
+		return err
+	}
+
+	if oldJob.Disabled != cronjob.Disabled {
+		err := dbstore.UpdateCronjob(id, cronjob.Disabled)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetCronjob gets a single cronjob from the database
+func GetCronjob(req *http.Request, params martini.Params, r render.Render) {
+	cronjob, err := dbstore.GetCronjobByID(params["id"])
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			r.JSON(500, map[string]interface{}{"response": "The specified cron job does not exist"})
+			return
+		}
+		fmt.Println(err)
+		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
+	}
+
+	r.JSON(200, cronjob)
 }

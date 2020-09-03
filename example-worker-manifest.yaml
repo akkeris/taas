@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: taas-cron-worker
+  name: taas-cron-worker
+  namespace: akkeris-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: taas-cron-worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: taas-cron-worker
+      name: taas-cron-worker
+    spec:
+      containers:
+      - name: taas-cron-worker
+        image: akkeris/taas:release-163
+        command: ["./start.sh"]
+        args: ["cron"]
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_ACCESS_KEY_ID
+              name: akkeris-system-iam
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SECRET_ACCESS_KEY
+              name: akkeris-system-iam
+        envFrom:
+        - configMapRef:
+            name: taas
+        imagePullPolicy: IfNotPresent
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30

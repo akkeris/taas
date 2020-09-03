@@ -8,10 +8,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strings"
 	structs "taas/structs"
+	"taas/utils"
 	"time"
+
 	shellwords "github.com/mattn/go-shellwords"
 )
 
@@ -63,7 +66,7 @@ func DeleteKubeJob(space string, jobName string) (e error) {
 	return nil
 }
 
-func Startpod(oneoff structs.OneOffSpec) (r string,e error) {
+func Startpod(oneoff structs.OneOffSpec) (r string, e error) {
 	var oneoffpod structs.OneOffPod
 	oneoffpod.APIVersion = "v1"
 	oneoffpod.Kind = "Pod"
@@ -97,31 +100,32 @@ func Startpod(oneoff structs.OneOffSpec) (r string,e error) {
 	bodybytes, err := json.Marshal(oneoffpod)
 	if err != nil {
 		fmt.Println(err)
-                return "",err
+		return "", err
 	}
 	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
 	kubernetesapiversion := os.Getenv("KUBERNETES_API_VERSION")
 	req, err := buildK8sRequest("POST", "https://"+kubernetesapiserver+"/api/"+kubernetesapiversion+"/namespaces/"+oneoff.Space+"/pods", bytes.NewBuffer(bodybytes))
 	req.Header.Add("Content-type", "application/json")
-	fmt.Printf("%+v\n", req)
+	requestDump, _ := httputil.DumpRequest(req, false)
+	utils.PrintDebug(string(requestDump))
 	resp, doerr := client.Do(req)
 
 	if doerr != nil {
 		fmt.Println(err)
-                return "",err
+		return "", err
 	}
-        fmt.Println(resp.StatusCode)
-                 
+	utils.PrintDebug(resp.Status)
+
 	defer resp.Body.Close()
 	bodybytes, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
-                return "",err
+		return "", err
 	}
-	fmt.Println(string(bodybytes))
-        if resp.StatusCode != 201 {
-                return string(bodybytes), errors.New(string(bodybytes))
-        }
+	utils.PrintDebug(string(bodybytes))
+	if resp.StatusCode != 201 {
+		return string(bodybytes), errors.New(string(bodybytes))
+	}
 	return string(bodybytes), nil
 }
 
@@ -145,7 +149,7 @@ func Deletepod(spacename string, pod string) string {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	return string(bodybytes)
 
 }
@@ -159,13 +163,13 @@ func deletePods(space string, podName string) (e error) {
 	return err
 }
 
-
 func kubernetesAPICall(method string, uri string) (re Response, err error) {
 	req, err := buildK8sRequest(method, uri, nil)
 	if err != nil {
 		return re, err
 	}
-	fmt.Println(req)
+	requestDump, _ := httputil.DumpRequest(req, false)
+	utils.PrintDebug(string(requestDump))
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -274,39 +278,39 @@ func GetTestLogs(jobspace string, job string, instance string) (l []string, e er
 	return lines, nil
 }
 
-func DescribePod(space string, name string) (o structs.PodDescribe, e error){
-        var pod structs.PodDescribe
-        kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
-        kubernetesapiversion := "/api/v1/"
-        uri := "https://" + kubernetesapiserver + kubernetesapiversion + "namespaces/" + space + "/pods/" + name
+func DescribePod(space string, name string) (o structs.PodDescribe, e error) {
+	var pod structs.PodDescribe
+	kubernetesapiserver := os.Getenv("KUBERNETES_API_SERVER")
+	kubernetesapiversion := "/api/v1/"
+	uri := "https://" + kubernetesapiserver + kubernetesapiversion + "namespaces/" + space + "/pods/" + name
 
-        resp, jerr := kubernetesAPICall("GET", uri)
-        if jerr != nil {
-                return pod, jerr
-        }
-        if resp.Status != http.StatusOK {
-                return pod,errors.New(string(resp.Body))
-        }
-        err := json.Unmarshal(resp.Body, &pod)
-        if err != nil {
-                return pod, err
-        }
+	resp, jerr := kubernetesAPICall("GET", uri)
+	if jerr != nil {
+		return pod, jerr
+	}
+	if resp.Status != http.StatusOK {
+		return pod, errors.New(string(resp.Body))
+	}
+	err := json.Unmarshal(resp.Body, &pod)
+	if err != nil {
+		return pod, err
+	}
 
-        uri = "https://" + kubernetesapiserver + kubernetesapiversion + "namespaces/" + space + "/events?fieldSelector=involvedObject.name="+name+",involvedObject.namespace="+space
+	uri = "https://" + kubernetesapiserver + kubernetesapiversion + "namespaces/" + space + "/events?fieldSelector=involvedObject.name=" + name + ",involvedObject.namespace=" + space
 
-        resp, jerr = kubernetesAPICall("GET", uri)
-        if jerr != nil {
-                return pod, jerr
-        }
-        if resp.Status != http.StatusOK {
-                return pod,errors.New(string(resp.Body))
-        }
-        var events structs.EventList
-        err = json.Unmarshal(resp.Body, &events)
-        if err != nil {
-                return pod, err
-        }
-        pod.Events=events
+	resp, jerr = kubernetesAPICall("GET", uri)
+	if jerr != nil {
+		return pod, jerr
+	}
+	if resp.Status != http.StatusOK {
+		return pod, errors.New(string(resp.Body))
+	}
+	var events structs.EventList
+	err = json.Unmarshal(resp.Body, &events)
+	if err != nil {
+		return pod, err
+	}
+	pod.Events = events
 
-        return pod, nil
+	return pod, nil
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	dbstore "taas/dbstore"
 	structs "taas/structs"
+	"taas/utils"
 	"time"
 
 	sarama "github.com/Shopify/sarama"
@@ -132,12 +133,12 @@ func WriteLogES(diagnostic structs.DiagnosticSpec, logs structs.LogLines) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 }
 
 func GetLogsES(params martini.Params, r render.Render) {
 	runid := params["runid"]
-	fmt.Println(runid)
+	utils.PrintDebug(runid)
 	url := os.Getenv("ES_URL") + "/logs/run/" + runid
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -186,7 +187,7 @@ func GetLogsES(params martini.Params, r render.Render) {
 
 func GetLogsESObj(params martini.Params, r render.Render) {
 	runid := params["runid"]
-	fmt.Println(runid)
+	utils.PrintDebug(runid)
 	url := os.Getenv("ES_URL") + "/logs/run/" + runid
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -266,7 +267,7 @@ func WriteLogESPost(eslogs structs.ESlogSpecIn1, berr binding.Errors, params mar
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 }
 
 func GetRuns(params martini.Params, r render.Render) {
@@ -275,6 +276,7 @@ func GetRuns(params martini.Params, r render.Render) {
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err.Error()})
+		return
 	}
 	r.JSON(200, runlist)
 }
@@ -301,7 +303,7 @@ func getRuns(job string, jobspace string) (rl structs.RunList, e error) {
 		fmt.Println(err)
 		return runlist, err
 	}
-	fmt.Println(string(bodybytes))
+	utils.PrintDebug(string(bodybytes))
 	var runs structs.RunsSpec
 	err = json.Unmarshal(bodybytes, &runs)
 	if err != nil {
@@ -310,12 +312,12 @@ func getRuns(job string, jobspace string) (rl structs.RunList, e error) {
 	}
 	for _, hit := range runs.Hits.Hits {
 		if hit.Source.Job == job && hit.Source.Jobspace == jobspace {
-			fmt.Println(hit.ID)
-			fmt.Println(hit.Source.Job + "-" + hit.Source.Jobspace)
-			fmt.Println(hit.Source.App + "-" + hit.Source.Space)
-			fmt.Println(hit.Source.Hrtimestamp)
-			fmt.Println(hit.Source.Overallstatus)
-			fmt.Println("buildid:" + hit.Source.BuildID)
+			utils.PrintDebug(hit.ID)
+			utils.PrintDebug(hit.Source.Job + "-" + hit.Source.Jobspace)
+			utils.PrintDebug(hit.Source.App + "-" + hit.Source.Space)
+			utils.PrintDebug(hit.Source.Hrtimestamp.String())
+			utils.PrintDebug(hit.Source.Overallstatus)
+			utils.PrintDebug("buildid:" + hit.Source.BuildID)
 			var run structs.Run
 			run.ID = hit.ID
 			run.App = hit.Source.App
@@ -328,7 +330,7 @@ func getRuns(job string, jobspace string) (rl structs.RunList, e error) {
 			runlist.Runs = append(runlist.Runs, run)
 		}
 	}
-	fmt.Println(runlist)
+	utils.PrintDebug(runlist)
 	var cutlist structs.RunList
 	endlen := 11
 	for index, element := range runlist.Runs {
@@ -350,7 +352,7 @@ func reverseRunList(input []structs.Run) []structs.Run {
 
 func GetRunInfo(params martini.Params, r render.Render) {
 	runid := params["runid"]
-	fmt.Println(runid)
+	utils.PrintDebug(runid)
 	url := os.Getenv("ES_URL") + "/logs/run/" + runid
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -379,17 +381,18 @@ func GetRunInfo(params martini.Params, r render.Render) {
 	}
 	var empty []string
 	logs.Source.Logs = empty
-	fmt.Println(logs)
+	utils.PrintDebug(logs)
 
 	r.JSON(200, logs)
 }
 
 func TailLogs(w http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
-	fmt.Println(params["provided"])
+	utils.PrintDebug(params["provided"])
 	diagnostic, err := dbstore.FindDiagnostic(params["provided"])
 	if err != nil {
 		fmt.Println(err)
 		r.JSON(500, map[string]interface{}{"response": err})
+		return
 	}
 	if diagnostic.ID == "" {
 		r.JSON(500, map[string]interface{}{"response": "invalid test"})

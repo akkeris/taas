@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	structs "taas/structs"
+	"taas/utils"
 )
 
 func GetPipeline(pipelinename string) (p structs.PipelineSpec, e error) {
@@ -19,7 +20,7 @@ func GetPipeline(pipelinename string) (p structs.PipelineSpec, e error) {
 		return pipeline, err
 	}
 	req.Header.Add("Content-type", "application/json")
-        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+	req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -56,7 +57,7 @@ func PromoteApp(promotion structs.PromotionSpec) (s string, e error) {
 		return "failed", err
 	}
 	req.Header.Add("Content-type", "application/json")
-        req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
+	req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -70,13 +71,13 @@ func PromoteApp(promotion structs.PromotionSpec) (s string, e error) {
 		fmt.Println(err)
 		return "failed", err
 	}
-	fmt.Println(string(bodybytes))
-        var promotestatus structs.PromoteStatus
-        err = json.Unmarshal(bodybytes, &promotestatus)
-        if err != nil {
-                fmt.Println(err)
-                return  "failed.  "+string(bodybytes),  err
-        }
+	utils.PrintDebug(string(bodybytes))
+	var promotestatus structs.PromoteStatus
+	err = json.Unmarshal(bodybytes, &promotestatus)
+	if err != nil {
+		fmt.Println(err)
+		return "failed.  " + string(bodybytes), err
+	}
 
 	return promotestatus.Status, nil
 }

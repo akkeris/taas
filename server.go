@@ -8,12 +8,14 @@ import (
 	"strconv"
 	artifacts "taas/artifacts"
 	cronjobs "taas/cronjobs"
+	"taas/cronworker"
 	dbstore "taas/dbstore"
 	diagnosticlogs "taas/diagnosticlogs"
 	diagnostics "taas/diagnostics"
 	hooks "taas/hooks"
 	jobs "taas/jobs"
 	structs "taas/structs"
+	"taas/utils"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -63,13 +65,32 @@ func createDB() {
 	}
 }
 
+func isCronWorker() bool {
+	for _, v := range os.Args[1:] {
+		if v == "--cron_worker" {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	checkEnv()
 	createDB()
 	dbstore.InitAuditPool()
 	dbstore.InitCronjobPool()
 	artifacts.Init()
-	cronjobs.StartCron()
+	jobs.StartClient()
+
+	if isCronWorker() {
+		cronworker.Start()
+		return
+	}
+
+	// Not using new cron worker
+	if os.Getenv("ENABLE_CRON_WORKER") == "" {
+		cronjobs.StartCron()
+	}
 
 	// Mark orphan jobs (env should be set if running in production)
 	if os.Getenv("FIND_ORPHANS") != "" {
@@ -77,8 +98,7 @@ func main() {
 		dbstore.FindCronOrphans()
 	}
 
-	jobs.StartClient()
-	m := martini.Classic()
+	m := utils.CreateClassicMartini()
 	m.Use(render.Renderer())
 	m.Post("/v1/releasehook", binding.Json(structs.ReleaseHookSpec{}), hooks.ReleaseHook)
 	m.Post("/v1/buildhook", binding.Json(structs.BuildPayload{}), hooks.BuildHook)
@@ -121,6 +141,11 @@ func main() {
 	m.Get("/v1/cronjob/:id/runs", cronjobs.GetCronjobRuns)
 
 	m.Get("/v1/status/runs", diagnostics.GetCurrentRuns)
+
+	if os.Getenv("ENABLE_CRON_WORKER") != "" {
+		m.Get("/v1/cronjob/:id", cronjobs.GetCronjob)
+		m.Patch("/v1/cronjob/:id", binding.Json(structs.Cronjob{}), cronjobs.UpdateCronjob)
+	}
 
 	m.Use(martini.Static("static"))
 	m.Run()
