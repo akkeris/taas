@@ -100,7 +100,7 @@ func GetCronjobRuns(id string, runs string, filter string) (j []structs.CronjobR
 
 func GetCronjobs() (j []structs.Cronjob, e error) {
 	var cronjobs []structs.Cronjob
-	selectstring := "select id, job, jobspace, cronspec, coalesce(command,null,'') from cronjobs"
+	selectstring := "select id, job, jobspace, cronspec, coalesce(command,null,''), disabled from cronjobs"
 	stmt, err := cdb.Prepare(selectstring)
 	if err != nil {
 		fmt.Println(err)
@@ -115,7 +115,8 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 		var jobspace string
 		var cs string
 		var command string
-		err := rows.Scan(&id, &job, &jobspace, &cs, &command)
+		var disabled bool
+		err := rows.Scan(&id, &job, &jobspace, &cs, &command, &disabled)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -124,6 +125,7 @@ func GetCronjobs() (j []structs.Cronjob, e error) {
 		current.Jobspace = jobspace
 		current.Cronspec = cs
 		current.Command = command
+		current.Disabled = disabled
 		cronjobs = append(cronjobs, current)
 	}
 	return cronjobs, nil
