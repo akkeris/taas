@@ -89,21 +89,22 @@ func Start() {
 }
 
 // Handle incoming database messages
+// Adapted from https://coussej.github.io/2015/09/15/Listening-to-generic-JSON-notifications-from-PostgreSQL-in-Go/
 func waitForChanges() {
 	for {
 		select {
 
 		// Message received
-		case n := <-listener.Notify:
-			// n will be nil when the connection was reestablished
-			if n == nil {
+		case notification := <-listener.Notify:
+			// notification will be nil when the connection was reestablished
+			if notification == nil {
 				fmt.Println("[cron_worker]: Connection reestablished")
 				return
 			}
 
 			// Unmarshal to struct
 			var msg incomingMessage
-			err := json.Unmarshal([]byte(n.Extra), &msg)
+			err := json.Unmarshal([]byte(notification.Extra), &msg)
 			if err != nil {
 				fmt.Println("Error unmarshalling JSON: ", err)
 				return
