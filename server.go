@@ -18,6 +18,7 @@ import (
 	"taas/utils"
 
 	"github.com/go-martini/martini"
+	"github.com/joho/godotenv"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 )
@@ -75,6 +76,7 @@ func isCronWorker() bool {
 }
 
 func main() {
+	godotenv.Load()
 	checkEnv()
 	createDB()
 	dbstore.InitAuditPool()
