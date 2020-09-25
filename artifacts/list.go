@@ -60,8 +60,8 @@ var (
 	c       *config
 )
 
-func Init(){
-        c = configFromEnvironmentVariables()
+func Init() {
+	c = configFromEnvironmentVariables()
 }
 
 func configFromEnvironmentVariables() *config {
@@ -465,9 +465,9 @@ func s3listFiles(w http.ResponseWriter, r *http.Request, backet, key string) {
 			}
 			html += "</li>"
 		}
-                if (len(files)==0) {
-                        html += "<h3>No Artifacts</h3>"
-                }
+		if len(files) == 0 {
+			html += "<h3>No Artifacts</h3>"
+		}
 		html += "</ul></font></body></html>"
 		fmt.Fprintln(w, html)
 		return
