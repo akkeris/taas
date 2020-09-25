@@ -8,9 +8,8 @@ import (
 	"net/http"
 	"os"
 	structs "taas/structs"
-	"taas/utils"  
+	"taas/utils"
 )
-
 
 func GetMostRecentReleaseID(diagnostic structs.DiagnosticSpec) (r string) {
 	req, err := http.NewRequest("GET", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+diagnostic.App+"-"+diagnostic.Space+"/releases", nil)
