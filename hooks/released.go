@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	diagnostics "taas/diagnostics"
@@ -25,10 +24,7 @@ func ReleasedHook(req *http.Request, releasedhookpayload structs.ReleasedHookSpe
 }
 
 func ReleasedHookHandler(req *http.Request, releasedhookpayload structs.ReleasedHookSpec, isCron bool) {
-	fmt.Println("*** ReleasedHookHandler ***")
 	releasedhookpayload.Release.Result = "succeeded"
-	s, _ := json.MarshalIndent(releasedhookpayload, "", "  ")
-	fmt.Println(string(s))
 
 	utils.PrintDebug(releasedhookpayload.App.Name)
 	utils.PrintDebug(releasedhookpayload.Space.Name)

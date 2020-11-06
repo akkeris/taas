@@ -24,7 +24,6 @@ func ReleaseHook(req *http.Request, releasehookpayload structs.ReleaseHookSpec, 
 }
 
 func ReleaseHookHandler(req *http.Request, releasehookpayload structs.ReleaseHookSpec, isCron bool) {
-
 	utils.PrintDebug(releasehookpayload.App.Name)
 	utils.PrintDebug(releasehookpayload.Space.Name)
 	utils.PrintDebug(releasehookpayload.Action)
