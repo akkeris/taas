@@ -16,4 +16,5 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/satori/go.uuid v1.2.0
 )

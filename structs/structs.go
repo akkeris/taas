@@ -172,6 +172,46 @@ type ReleaseHookSpec struct {
 	} `json:"build"`
 }
 
+type ReleasedHookSpec struct {
+	Action string `json:"action"`
+	App    struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	} `json:"app"`
+	Build struct {
+		ID string `json:"id"`
+	} `json:"build"`
+	Dyno struct {
+		Type string `json:"type"`
+	} `json:"dyno"`
+	Key     string `json:"key"`
+	Release struct {
+		ID        string    `json:"id"`
+		Result    string    `json:"result,omitempty"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Version   int       `json:"version"`
+	} `json:"release"`
+	ReleasedAt time.Time `json:"released_at"`
+	Slug       struct {
+		Image      string `json:"image"`
+		SourceBlob struct {
+			Checksum string      `json:"checksum"`
+			URL      string      `json:"url"`
+			Version  string      `json:"version"`
+			Commit   string      `json:"commit"`
+			Author   interface{} `json:"author"`
+			Repo     string      `json:"repo"`
+			Branch   string      `json:"branch"`
+			Message  interface{} `json:"message"`
+		} `json:"source_blob"`
+		ID string `json:"id"`
+	} `json:"slug"`
+	Space struct {
+		Name string `json:"name"`
+	} `json:"space"`
+}
+
 type EnvironmentVariable struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`

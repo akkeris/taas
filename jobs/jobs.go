@@ -478,7 +478,7 @@ func GetCurrentImage(app string) (i string) {
 	return appinfo.Image
 }
 
-// CreateHooks - Check presence of build/release hooks on an app and add them if needed
+// CreateHooks - Check presence of build/released hooks on an app and add them if needed
 func CreateHooks(appspace string) (e error) {
 	svcurl := os.Getenv("TAAS_SVC_URL")
 	var failedHooks []string
@@ -489,13 +489,13 @@ func CreateHooks(appspace string) (e error) {
 	}
 
 	needsBuild := true
-	needsRelease := true
+	needsReleased := true
 	for _, hook := range hooks {
 		if needsBuild {
 			needsBuild = !strings.Contains(hook.URL, svcurl+"/v1/buildhook")
 		}
-		if needsRelease {
-			needsRelease = !strings.Contains(hook.URL, svcurl+"/v1/releasehook")
+		if needsReleased {
+			needsReleased = !strings.Contains(hook.URL, svcurl+"/v1/releasedhook")
 		}
 	}
 
@@ -508,12 +508,12 @@ func CreateHooks(appspace string) (e error) {
 		}
 	}
 
-	if needsRelease {
-		err := CreateHook(true, []string{"release"}, svcurl+"/v1/releasehook", "merpderp", appspace)
+	if needsReleased {
+		err := CreateHook(true, []string{"released"}, svcurl+"/v1/releasedhook", "merpderp", appspace)
 		if err != nil {
-			fmt.Println("Error creating release hook")
+			fmt.Println("Error creating released hook")
 			fmt.Println(err)
-			failedHooks = append(failedHooks, "release")
+			failedHooks = append(failedHooks, "released")
 		}
 	}
 
