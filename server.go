@@ -103,6 +103,7 @@ func main() {
 	m := utils.CreateClassicMartini()
 	m.Use(render.Renderer())
 	m.Post("/v1/releasehook", binding.Json(structs.ReleaseHookSpec{}), hooks.ReleaseHook)
+	m.Post("/v1/releasedhook", binding.Json(structs.ReleasedHookSpec{}), hooks.ReleasedHook)
 	m.Post("/v1/buildhook", binding.Json(structs.BuildPayload{}), hooks.BuildHook)
 	m.Post("/v1/diagnostic", binding.Json(structs.DiagnosticSpec{}), diagnostics.CreateDiagnostic)
 	m.Patch("/v1/diagnostic", binding.Json(structs.DiagnosticSpec{}), diagnostics.UpdateDiagnostic)
