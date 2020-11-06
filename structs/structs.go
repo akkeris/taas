@@ -537,7 +537,16 @@ type AppControllerApp struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"organization"`
-	Formation struct {
+	Formation []struct {
+		ID          string    `json:"id,omitempty"`
+		Type        string    `json:"type,omitempty"`
+		Port        int       `json:"port,omitempty"`
+		Quantity    int       `json:"quantity,omitempty"`
+		Size        string    `json:"size,omitempty"`
+		Command     string    `json:"command,omitempty"`
+		CreatedAt   time.Time `json:"created_at,omitempty"`
+		UpdatedAt   time.Time `json:"updated_at,omitempty"`
+		Healthcheck string    `json:"healthcheck,omitempty"`
 	} `json:"formation"`
 	Region struct {
 		ID   string `json:"id"`
