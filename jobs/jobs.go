@@ -49,6 +49,13 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 		return err
 	}
 	utils.PrintDebug(rowCnt)
+
+	err = CreateHooks(diagnosticspec.App + "-" + diagnosticspec.Space)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
 	return nil
 }
 
