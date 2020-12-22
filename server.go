@@ -14,6 +14,7 @@ import (
 	diagnostics "taas/diagnostics"
 	hooks "taas/hooks"
 	jobs "taas/jobs"
+	"taas/migrations"
 	structs "taas/structs"
 	"taas/utils"
 
@@ -98,6 +99,10 @@ func main() {
 	if os.Getenv("FIND_ORPHANS") != "" {
 		dbstore.FindOrphans()
 		dbstore.FindCronOrphans()
+	}
+
+	if os.Getenv("MIGRATE_TO_RELEASED") != "" {
+		migrations.MigrateToReleased()
 	}
 
 	m := utils.CreateClassicMartini()
