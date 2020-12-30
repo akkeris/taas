@@ -54,7 +54,13 @@ func MigrateToReleased() {
 		fmt.Println("Creating released webhook:\n  App: " + appspace + "\n")
 		jobs.CreateHooks(appspace)
 
-		releaseDiagnostic.Action = "released"
-		jobs.UpdateService(releaseDiagnostic)
+		sqlStatement := `
+			UPDATE diagnostics
+			SET action='released'
+			WHERE job=$1 and jobspace=$2`
+		_, err = db.Exec(sqlStatement, releaseDiagnostic.Job, releaseDiagnostic.JobSpace)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
