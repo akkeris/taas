@@ -27,7 +27,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 	}
 	defer db.Close()
 	utils.PrintDebug(diagnosticspec.Slackchannel)
-	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8,testpreviews=$9,webhookurls=$10,action=$11 where job=$12 and jobspace=$13")
+	stmt, err := db.Prepare("UPDATE diagnostics set image=$1,pipelinename=$2,transitionfrom=$3,transitionto=$4,timeout=$5,startdelay=$6,slackchannel=$7,command=$8,testpreviews=$9,webhookurls=$10 where job=$11 and jobspace=$12")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -36,7 +36,7 @@ func UpdateService(diagnosticspec structs.DiagnosticSpec) (e error) {
 		diagnosticspec.Image, diagnosticspec.PipelineName, diagnosticspec.TransitionFrom,
 		diagnosticspec.TransitionTo, diagnosticspec.Timeout, diagnosticspec.Startdelay,
 		diagnosticspec.Slackchannel, diagnosticspec.Command, diagnosticspec.TestPreviews,
-		diagnosticspec.WebhookURLs, diagnosticspec.Action, diagnosticspec.Job, diagnosticspec.JobSpace,
+		diagnosticspec.WebhookURLs, diagnosticspec.Job, diagnosticspec.JobSpace,
 	)
 	if err != nil {
 		fmt.Println(err)
