@@ -21,7 +21,7 @@ func MigrateToReleased() {
 	rows, err := db.Query("SELECT app, space, action, job, jobspace FROM diagnostics WHERE action=$1", "release")
 	if err != nil {
 		fmt.Println("Error selecting all diagnostics with action=release")
-		fmt.Println(err)
+		panic(err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -30,11 +30,12 @@ func MigrateToReleased() {
 		if err != nil {
 			fmt.Println("Error scanning rows")
 			fmt.Println(err)
+			continue
 		}
 		releaseDiagnostics = append(releaseDiagnostics, releaseDiagnostic)
 	}
 	if err = rows.Err(); err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	for _, releaseDiagnostic := range releaseDiagnostics {
@@ -67,6 +68,7 @@ func MigrateToReleased() {
 		if err != nil {
 			fmt.Println("Error: Unable to update diagnostic. Diagnostic " + releaseDiagnostic.Job + "-" + releaseDiagnostic.JobSpace + ". App: " + appspace)
 			fmt.Println(err)
+			continue
 		}
 	}
 }
