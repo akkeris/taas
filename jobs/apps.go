@@ -205,7 +205,7 @@ func GetHooks(app string) (h []structs.AppHook, e error) {
 }
 
 func DeleteHook(app string, hookid string) (e error) {
-	req, err := http.NewRequest("DELETE", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+"app"+"/hooks/"+hookid, nil)
+	req, err := http.NewRequest("DELETE", os.Getenv("APP_CONTROLLER_URL")+"/apps/"+app+"/hooks/"+hookid, nil)
 	req.Header.Set("Authorization", os.Getenv("APP_CONTROLLER_AUTH"))
 	if err != nil {
 		fmt.Println(err)
