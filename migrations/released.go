@@ -62,7 +62,7 @@ func MigrateToReleased() {
 
 		sqlStatement := `
 			UPDATE diagnostics
-			SET action='released'
+			SET action='released', startdelay=0
 			WHERE job=$1 and jobspace=$2`
 		_, err = db.Exec(sqlStatement, releaseDiagnostic.Job, releaseDiagnostic.JobSpace)
 		if err != nil {
