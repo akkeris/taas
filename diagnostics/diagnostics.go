@@ -95,6 +95,12 @@ func RunDiagnostic(diagnostic structs.DiagnosticSpec, isCron bool, cronjob struc
 	akkeris.AddVar(newvar)
 	akkeris.UpdateVar(newvar)
 
+	newvar.Setname = diagnostic.Job + "-" + diagnostic.JobSpace + "-cs"
+	newvar.Varname = "ORIGIN"
+	newvar.Varvalue = "taas"
+	akkeris.AddVar(newvar)
+	akkeris.UpdateVar(newvar)
+
 	go check(diagnostic, isCron, cronjob)
 	return nil
 }
