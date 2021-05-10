@@ -143,7 +143,8 @@ func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 	}
 	for _, status := range statuses.Statuses {
 		utils.PrintDebug(status.ID)
-		if status.Context == "taas/"+diagnostic.Job+"-"+diagnostic.JobSpace {
+		testContext := "taas/" + diagnostic.Job + "-" + diagnostic.JobSpace
+		if status.Context == testContext || status.Context == testContext[:28]+"..." {
 			statusid = status.ID
 		}
 	}
@@ -247,6 +248,9 @@ func setStatusCheck(status string, diagnostic structs.DiagnosticSpec, loglink st
 		releasestatus.State = "pending"
 		releasestatus.Description = "Tests are still running"
 		releasestatus.Context = "taas/" + diagnostic.Job + "-" + diagnostic.JobSpace
+		if len(releasestatus.Context) >= 32 {
+			releasestatus.Context = releasestatus.Context[:28] + "..."
+		}
 		createStatusCheck(releasestatus, diagnostic, loglink)
 		statusid, err := getStatusCheck(diagnostic)
 		if err != nil {
