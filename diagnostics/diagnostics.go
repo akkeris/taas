@@ -144,7 +144,10 @@ func getStatusCheck(diagnostic structs.DiagnosticSpec) (c string, e error) {
 	for _, status := range statuses.Statuses {
 		utils.PrintDebug(status.ID)
 		testContext := "taas/" + diagnostic.Job + "-" + diagnostic.JobSpace
-		if status.Context == testContext || status.Context == testContext[:28]+"..." {
+		if len(testContext) >= 32 {
+			testContext = testContext[:28] + "..."
+		}
+		if status.Context == testContext {
 			statusid = status.ID
 		}
 	}
